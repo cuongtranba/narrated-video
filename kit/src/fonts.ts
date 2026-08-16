@@ -16,16 +16,27 @@
  * the same families.
  */
 
-import { loadFont as loadInter } from "@remotion/google-fonts/Inter"
+import { loadFont as loadBeVietnamPro } from "@remotion/google-fonts/BeVietnamPro"
 import { loadFont as loadRobotoMono } from "@remotion/google-fonts/RobotoMono"
 import { cancelRender, continueRender, delayRender } from "remotion"
 
 import type { Locale } from "./generated/timeline"
 
-const body = loadInter("normal", { weights: ["400", "600", "700"], subsets: ["latin"] })
+// The `vietnamese` subset is REQUESTED, not merely available: an @font-face is
+// injected only for the subsets asked for here, and a forgotten one falls back
+// silently — another face fills in the missing glyphs and nothing on screen
+// says so. These subsets and video.config.yaml's must agree; `nv validate`
+// checks the config's half.
+const body = loadBeVietnamPro("normal", {
+  weights: ["400", "600", "700"],
+  subsets: ["latin", "vietnamese"],
+})
 
 /** Anything the system itself writes: ids, counts, paths, exit codes. */
-const mono = loadRobotoMono("normal", { weights: ["400", "500"], subsets: ["latin"] })
+const mono = loadRobotoMono("normal", {
+  weights: ["400", "500"],
+  subsets: ["latin", "vietnamese"],
+})
 
 const fontsReady = delayRender("Loading fonts")
 

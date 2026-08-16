@@ -189,17 +189,15 @@ locales:
       label: Tiếng Việt
       charsPerSecond: 15.55
       expansionFactor: 1.35
-      font: bodyVi            # a DIFFERENT face — see fonts.md
+      font: body              # same face — it covers both scripts
       requiredSample: "tuyên bố ố ầ ế ấ ư ơ đ ọ"   # the hard stacked marks
 
+# One face for every locale, because this one genuinely covers both scripts —
+# the kit ships Be Vietnam Pro as its default for exactly this reason. A locale
+# whose script the shared face does NOT cover declares its own entry and points
+# `font:` at it; CHK-18 is what tells you which situation you are in.
 fonts:
   body:
-    kind: google
-    family: Inter
-    importName: Inter
-    subsets: [latin]
-    weights: ["400", "600", "700"]
-  bodyVi:
     kind: google
     family: Be Vietnam Pro
     importName: BeVietnamPro
@@ -209,7 +207,7 @@ fonts:
     kind: google
     family: Roboto Mono
     importName: RobotoMono
-    subsets: [latin]
+    subsets: [latin, vietnamese]
     weights: ["400", "500"]
 
 theme:

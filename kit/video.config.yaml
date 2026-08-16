@@ -29,18 +29,22 @@ locales:
 # script you are about to add: a font can carry single diacritics and silently
 # drop the stacked ones another language is built from. `nv validate` reads each
 # file's real cmap rather than trusting the subset it advertises.
+#
+# The default face ships with the `vietnamese` subset requested up front, so
+# adding a `vi` locale is a config edit rather than a font hunt — the stacked
+# vowels (ố ầ ế ấ ư ơ) are exactly what a latin-only face drops in silence.
 fonts:
   body:
     kind: google
-    family: Inter
-    importName: Inter
-    subsets: [latin]
+    family: Be Vietnam Pro
+    importName: BeVietnamPro
+    subsets: [latin, vietnamese]
     weights: ["400", "600", "700"]
   mono:
     kind: google
     family: Roboto Mono
     importName: RobotoMono
-    subsets: [latin]
+    subsets: [latin, vietnamese]
     weights: ["400", "500"]
 
 # Emitted verbatim into src/generated/theme.ts. OKLCH because the renderer is
