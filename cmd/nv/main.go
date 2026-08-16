@@ -69,21 +69,36 @@ func main() {
 	}
 }
 
-// flagSet is a deliberately small argument reader. The commands take a handful
-// of flags and a list of locales, and the standard library's flag package
-// insists those come in a fixed order.
+// Flags that take a value, so `--scene Title` and `--scene=Title` mean the same
+// thing. Without this the space form silently reads "Title" as a positional
+// argument, and `nv init --scene Title` scaffolds a project into a directory
+// called Title instead of adding a scene.
+var valueFlags = map[string]bool{"scene": true}
+
+// splitArgs is a deliberately small argument reader. The commands take a
+// handful of flags plus a list of locales, and the standard library's flag
+// package requires flags to come before positional arguments.
 func splitArgs(args []string) (flags map[string]string, rest []string) {
 	flags = map[string]string{}
-	for _, arg := range args {
+
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
 		switch {
 		case arg == "--":
 			continue
+
 		case strings.HasPrefix(arg, "--"):
 			name, value, hasValue := strings.Cut(strings.TrimPrefix(arg, "--"), "=")
 			if !hasValue {
-				value = "true"
+				if valueFlags[name] && i+1 < len(args) && !strings.HasPrefix(args[i+1], "--") {
+					i++
+					value = args[i]
+				} else {
+					value = "true"
+				}
 			}
 			flags[name] = value
+
 		default:
 			rest = append(rest, arg)
 		}

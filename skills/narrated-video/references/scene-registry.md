@@ -88,10 +88,10 @@ Three habits worth copying:
   whole video, one safe area, one heading rhythm.
 
 Available from `src/components/primitives.tsx`: `Reveal` (the one entrance — rise
-and fade on the shared ease), `Rule`, `SAFE`, `SIZE`, `RADIUS`, `EASE_OUT`,
-`HAIRLINE`. Colours come from `THEME` (`src/generated/theme.ts`, generated from
-`theme:` in the config); the type scale and safe area are layout decisions the
-components own, not config.
+and fade on the shared ease), `Rule`, `Card`, `Mono`, `Pill`, and the constants
+`SAFE`, `SIZE`, `RADIUS`, `EASE_OUT`, `HAIRLINE`. Colours come from `THEME`
+(`src/generated/theme.ts`, generated from `theme:` in the config); the type scale
+and safe area are layout decisions the components own, not config.
 
 ## The generated registry
 
