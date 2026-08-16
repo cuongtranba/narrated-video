@@ -296,9 +296,6 @@ directory (not prefixed `_`) that no config entry refers to.
 
 Remedy: `add the scene to video.config.yaml (nv init --scene <Id> scaffolds one), or delete the orphan module`
 
-Note: the working spelling of that flag is `--scene=<Id>` with an `=`. See
-`troubleshooting.md`.
-
 ## What is deliberately excluded
 
 No check reads pixels, asks a model to judge prose, touches the network, or needs

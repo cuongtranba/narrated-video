@@ -153,12 +153,8 @@ Two deliberate limits:
 ## Adding a scene
 
 ```bash
-nv init --scene=Middle
+nv init --scene Middle      # --scene=Middle works identically
 ```
-
-Note the `=`. `nv init --scene Middle` (with a space) is parsed as `nv init` into
-a directory called `Middle` and scaffolds a whole project there — see
-`troubleshooting.md`.
 
 That command writes `src/scenes/Middle.tsx` from `_template.tsx` and appends
 `- Middle` to `scenes:` in the config. Then:
@@ -172,7 +168,7 @@ Until step 1 you will see CHK-10 (no narration line) and CHK-25 (a scene with no
 line estimates to 0 narration frames, so its 38-frame length is under the
 60-frame floor). Both are correct and both clear on their own.
 
-`--scene=<Id>` appends to the end of `scenes:`. Reorder by moving the line in the
+`--scene` appends to the end of `scenes:`. Reorder by moving the line in the
 YAML — that is the whole operation, and `nv sync` re-derives the registry, the
 order and every composition from it.
 

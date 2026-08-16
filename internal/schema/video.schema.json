@@ -9,7 +9,7 @@
     "kitVersion": {
       "type": "integer",
       "minimum": 1,
-      "description": "Schema generation this file was written against. `nv init --upgrade` reports the delta."
+      "description": "Schema generation this file was written against, so a later version can tell how far behind a project is."
     },
 
     "video": {

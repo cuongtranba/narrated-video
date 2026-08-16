@@ -31,7 +31,7 @@ Nothing flows back. **Every file under `src/generated/` is overwritten by
 | change the palette | `theme:` in `video.config.yaml` |
 | change how long a scene runs | record the narration — that IS the length |
 
-Then: `nv sync`, `nv check`, `bun run typecheck`.
+Then: `nv sync`, `nv validate`, `bun run typecheck`.
 
 ## Scene lengths are derived, not chosen
 

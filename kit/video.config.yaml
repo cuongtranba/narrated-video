@@ -27,7 +27,7 @@ locales:
 
 # A face is declared per locale because covering latin says nothing about the
 # script you are about to add: a font can carry single diacritics and silently
-# drop the stacked ones another language is built from. `nv check` reads each
+# drop the stacked ones another language is built from. `nv validate` reads each
 # file's real cmap rather than trusting the subset it advertises.
 fonts:
   body:

@@ -29,6 +29,18 @@ const usage = `nv — narrated explainer videos
 Run from anywhere inside a project; the root is found by walking up.
 `
 
+// commands is the single list of what `nv` can do. Dispatch reads it, and so
+// does the drift test that checks the documentation never names a command that
+// does not exist — the docs shipped `nv check` for a while, which reads as a
+// perfectly plausible command and is not one.
+var commands = map[string]func(context.Context, []string) error{
+	"init":      func(_ context.Context, args []string) error { return runInit(args) },
+	"sync":      func(_ context.Context, args []string) error { return runSync(args) },
+	"validate":  runValidate,
+	"voiceover": runVoiceover,
+	"version":   func(context.Context, []string) error { return runVersion() },
+}
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -39,27 +51,18 @@ func main() {
 	}
 
 	command, args := os.Args[1], os.Args[2:]
-	var err error
-	switch command {
-	case "init":
-		err = runInit(args)
-	case "sync":
-		err = runSync(args)
-	case "validate":
-		err = runValidate(ctx, args)
-	case "voiceover":
-		err = runVoiceover(ctx, args)
-	case "version":
-		err = runVersion()
-	case "help", "-h", "--help":
+	if command == "help" || command == "-h" || command == "--help" {
 		fmt.Print(usage)
 		return
-	default:
+	}
+
+	run, known := commands[command]
+	if !known {
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n%s", command, usage)
 		os.Exit(2)
 	}
 
-	if err != nil {
+	if err := run(ctx, args); err != nil {
 		// A validation failure has already printed its findings; anything else
 		// is an error the operator has not been told about yet.
 		if err != errCheckFailed {

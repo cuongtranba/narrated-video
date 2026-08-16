@@ -12,7 +12,7 @@
  * right place to be stopped: a face that covers latin can carry single
  * diacritics and silently drop the stacked ones another script is built from —
  * no missing-glyph box, just the wrong word. `fonts` in video.config.yaml is
- * the other half (`nv check` reads each face's real cmap); the two must name
+ * the other half (`nv validate` reads each face's real cmap); the two must name
  * the same families.
  */
 

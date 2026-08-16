@@ -43,7 +43,7 @@ regenerating:
   ...
 ```
 
-Commands: `init [dir]` (`--scene=<Id>`), `sync`, `validate` (`--json`),
+Commands: `init [dir]` (`--scene <Id>`), `sync`, `validate` (`--json`),
 `voiceover [locale…]` (`--force`), `version`. Run any of them from anywhere inside
 a project — the root is found by walking up, like `git`.
 

@@ -15,7 +15,7 @@ checks. The project it writes contains no build tooling of its own — a broken
 | Task | Read | Start with |
 | --- | --- | --- |
 | New video from nothing | this file, then `references/config-schema.md` | `nv init <dir>` |
-| Add a scene | `references/scene-registry.md` | `nv init --scene=<Id>` |
+| Add a scene | `references/scene-registry.md` | `nv init --scene <Id>` |
 | Add a language / translate | `references/localization.md`, `references/fonts.md` | `locales.list` + `content/<code>.yaml` |
 | Edit copy or narration | `references/localization.md` | `content/<locale>.yaml`, then `nv sync` |
 | A check is failing | `references/validate-checks.md` | the remedy line the failure printed |
@@ -36,7 +36,7 @@ at install time. `bin/nv` is a POSIX shim that picks `darwin-arm64`,
 `darwin-amd64`, `linux-amd64` or `linux-arm64`. Windows is not supported yet, and
 the shim says so rather than failing obscurely.
 
-Commands: `init [dir]` (`--scene=<Id>`), `sync`, `validate` (`--json`),
+Commands: `init [dir]` (`--scene <Id>`), `sync`, `validate` (`--json`),
 `voiceover [locale…]` (`--force`), `version`. Run any of them from anywhere
 inside a project — the root is found by walking up, like `git`.
 

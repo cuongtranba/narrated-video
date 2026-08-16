@@ -32,12 +32,10 @@ or a `scripts/` directory with `ajv` and `@remotion/media-parser` in it — stop
 
 ## `nv` CLI gotchas
 
-**`--scene` needs an `=`.** `nv init --scene=Middle` adds a scene.
-`nv init --scene Middle` (with a space) does something else entirely: the argument
-parser reads `--scene` as a boolean and `Middle` as the target directory, so it
-**scaffolds a whole new project into `./Middle`**. If that happened, delete the
-directory and re-run with the `=`. (CHK-24's own remedy text prints the
-space-separated form; the `=` form is the one that works.)
+**`--scene` takes either spelling.** `nv init --scene Middle` and
+`nv init --scene=Middle` both add a scene. If you are on an older build where the
+space form scaffolded a whole project into `./Middle` instead, delete that
+directory and use `--scene=Middle`.
 
 **`--` in remedy text is harmless.** Several remedies print
 `nv voiceover -- <locale>`. `nv voiceover en` works identically — bare `--` is
@@ -159,7 +157,7 @@ face is named for it.
 | `refusing to write empty audio to …` | provider returned nothing | check the API response; usually a bad voice id |
 | `mp3: no valid MPEG audio frame found` | the written file is not MPEG audio | usually an API error body saved as `.mp3`; delete it and re-run |
 | `unknown locale "xx" — the project declares [en vi]` | typo in a `nv voiceover` argument | use a declared code |
-| `"…" is not a scene id — use PascalCase letters and digits` | `nv init --scene=my-scene` | `--scene=MyScene` |
+| `"…" is not a scene id — use PascalCase letters and digits` | `nv init --scene my-scene` | `--scene MyScene` |
 | `needs an mp3 encoder on PATH, found neither ffmpeg nor lame` | `say` provider without an encoder | `brew install ffmpeg` |
 | `only available on macOS (running linux)` | `say` provider off macOS | use `silence` or `elevenlabs` |
 | `fonts: … is woff1` / `is a font collection` | unsupported local font container | convert to woff2, ttf or a single-face otf |
