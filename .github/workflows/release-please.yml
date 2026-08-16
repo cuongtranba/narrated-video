@@ -36,5 +36,9 @@ jobs:
             platform=${dir%/}
             tar -czf "/tmp/nv-$platform.tar.gz" -C "$platform" nv
           done
-          cd /tmp && sha256sum nv-*.tar.gz > checksums.txt
-          gh release upload "$TAG" /tmp/nv-*.tar.gz /tmp/checksums.txt --clobber
+          (cd /tmp && sha256sum nv-*.tar.gz > checksums.txt)
+
+          # --repo is not optional here: gh infers the repository from the git
+          # remote, and the checksums are written in /tmp, which is not one.
+          gh release upload "$TAG" /tmp/nv-*.tar.gz /tmp/checksums.txt \
+            --repo "${{ github.repository }}" --clobber
