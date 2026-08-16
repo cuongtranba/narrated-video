@@ -26,61 +26,71 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
 
-  # The binaries are committed so an install needs no build. That only stays
-  # honest if a rebuild reproduces them: -trimpath with a pinned toolchain is
-  # byte-reproducible, so any difference means the committed artifact no longer
-  # matches the source that claims to produce it.
-  binary-parity:
+  # The binaries are committed so an install needs no build, which raises one
+  # question: are they still the ones this source produces?
+  #
+  # Byte-comparing a rebuild does not answer it. Two installations of the same
+  # Go version — Homebrew's and the one this runner downloads — emit binaries of
+  # identical size and differing bytes even under -trimpath -buildid=, so that
+  # check fails on every push from a laptop while proving nothing.
+  #
+  # Commit order answers it directly and deterministically: if the newest commit
+  # touching the source is newer than the newest commit touching the binaries,
+  # someone edited one and did not rebuild the other.
+  binaries-current:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-go@v7.0.0
         with:
-          go-version: ${{ env.GO_VERSION }}
+          fetch-depth: 0
 
-      - run: make binaries
-
-      - name: Committed binaries match their source
+      - name: Binaries are at least as new as the source they come from
         run: |
-          if ! git diff --exit-code --stat skills/narrated-video/bin; then
-            echo "::error::Committed binaries differ from a rebuild. Run 'make binaries' and commit the result."
+          source_at=$(git log -1 --format=%ct -- cmd internal kit go.mod go.sum)
+          binaries_at=$(git log -1 --format=%ct -- skills/narrated-video/bin)
+
+          echo "newest source commit:   $(date -u -d @"$source_at" 2>/dev/null || date -u -r "$source_at")"
+          echo "newest binary commit:   $(date -u -d @"$binaries_at" 2>/dev/null || date -u -r "$binaries_at")"
+
+          if [ "$source_at" -gt "$binaries_at" ]; then
+            echo "::error::The source changed after the binaries were last built. Run 'make binaries' and commit the result."
+            git log --oneline -3 -- cmd internal kit go.mod go.sum
             exit 1
           fi
 
-  # Everything a user does on day one, using the binary just built. This is the
-  # test that would have caught the reference project's real failure: a video
-  # whose committed audio no longer matched its script.
+  # Everything a user does on day one — run against the COMMITTED binary, not a
+  # fresh build. That is the artifact people actually install, so it is the one
+  # whose behaviour has to be checked; a stale commit fails here rather than in
+  # someone's first hour with the tool.
   end-to-end:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7.0.1
-      - uses: actions/setup-go@v7.0.0
-        with:
-          go-version: ${{ env.GO_VERSION }}
       - uses: oven-sh/setup-bun@v2
-
-      - run: make build
 
       - name: Scaffold, and expect exactly the two failures a fresh project has
         run: |
+          nv="$GITHUB_WORKSPACE/skills/narrated-video/bin/nv"
           mkdir -p /tmp/demo && cd /tmp/demo
-          "$GITHUB_WORKSPACE/bin/nv" init .
+          "$nv" init .
 
-          failing=$("$GITHUB_WORKSPACE/bin/nv" validate --json | jq -r '.[] | select(.OK == false) | .ID' | sort | tr '\n' ' ')
+          failing=$("$nv" validate --json | jq -r '.[] | select(.OK == false) | .ID' | sort | tr '\n' ' ')
           echo "failing: $failing"
           [ "$failing" = "CHK-05 CHK-06 " ] || { echo "::error::expected CHK-05 and CHK-06, got: $failing"; exit 1; }
 
       - name: Synthesize with no API key, then expect a clean gate
         run: |
+          nv="$GITHUB_WORKSPACE/skills/narrated-video/bin/nv"
           cd /tmp/demo
-          "$GITHUB_WORKSPACE/bin/nv" voiceover
-          "$GITHUB_WORKSPACE/bin/nv" validate
+          "$nv" voiceover
+          "$nv" validate
 
-      - name: Generated files are stable
+      - name: Regenerating changes nothing
         run: |
+          nv="$GITHUB_WORKSPACE/skills/narrated-video/bin/nv"
           cd /tmp/demo
-          "$GITHUB_WORKSPACE/bin/nv" sync
-          "$GITHUB_WORKSPACE/bin/nv" validate
+          "$nv" sync
+          "$nv" validate
 
       # A new Remotion release breaking the template should surface here, not in
       # someone's first hour with the tool.
