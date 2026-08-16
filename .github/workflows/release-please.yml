@@ -12,9 +12,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      # A user token rather than GITHUB_TOKEN, for one reason: a PR authored by
+      # github-actions[bot] gets its workflow runs held at action_required until
+      # a human approves them, so every release PR showed up "failing" while its
+      # CI had simply never run. A PR authored by a person triggers CI normally.
       - uses: googleapis/release-please-action@v5.0.0
         id: release
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
