@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.0](https://github.com/cuongtranba/narrated-video/compare/v0.2.0...v0.3.0) (2026-08-16)
+
+
+### Features
+
+* **kit:** default the template to Be Vietnam Pro with the vietnamese subset ([328a777](https://github.com/cuongtranba/narrated-video/commit/328a77729a719221ce646c7e7b67cda424686590))
+
+
+### Bug Fixes
+
+* **ci:** tell gh which repository to upload release assets to ([5771194](https://github.com/cuongtranba/narrated-video/commit/577119458d24300417146f3cd9626c643558ec55))
+
 ## [0.2.0](https://github.com/cuongtranba/narrated-video/compare/v0.1.0...v0.2.0) (2026-08-16)
 
 
