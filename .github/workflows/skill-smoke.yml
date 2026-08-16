@@ -1,0 +1,63 @@
+name: Skill install smoke
+
+# Installing through the real CLI is the only place the distribution traps show
+# up, and none of them announce themselves:
+#
+#   - the skills CLI force-disables Git LFS during clone, so an LFS-tracked
+#     binary arrives as a ~130-byte pointer file;
+#   - it preserves the executable bit by chmod'ing to the source mode — which is
+#     an implementation detail read out of its source, not a documented
+#     contract, so it can regress under us;
+#   - there are no lifecycle hooks, so nothing can repair any of this at install
+#     time.
+#
+# The weekly run is the point: a regression in the CLI would otherwise be
+# invisible until a user reported that the skill does nothing.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install the way a user does
+        env:
+          DISABLE_TELEMETRY: "1"
+        run: |
+          export HOME=/tmp/fresh-home
+          mkdir -p "$HOME"
+          npx --yes skills add cuongtranba/narrated-video --global --yes
+
+      - name: The binary survived the trip
+        run: |
+          export HOME=/tmp/fresh-home
+          installed=$(find "$HOME" -path '*narrated-video/bin/linux-amd64/nv' | head -1)
+          [ -n "$installed" ] || { echo "::error::binary not found after install"; exit 1; }
+
+          size=$(stat -c%s "$installed")
+          [ "$size" -gt 1000000 ] || {
+            echo "::error::binary is $size bytes — that is a Git LFS pointer, not an executable"
+            head -c 200 "$installed"; exit 1; }
+
+          [ -x "$installed" ] || { echo "::error::binary lost its executable bit"; ls -l "$installed"; exit 1; }
+
+          "$installed" version
+
+      - name: A project scaffolded from the installed skill passes its own gate
+        run: |
+          export HOME=/tmp/fresh-home
+          nv=$(find "$HOME" -path '*narrated-video/bin/nv' | head -1)
+          mkdir -p /tmp/smoke && cd /tmp/smoke
+          "$nv" init .
+          "$nv" voiceover
+          "$nv" validate

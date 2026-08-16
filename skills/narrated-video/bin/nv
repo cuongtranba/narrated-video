@@ -1,0 +1,27 @@
+#!/bin/sh
+# Resolve the prebuilt `nv` for this machine.
+#
+# The binaries are committed next to this script, so an install needs no build
+# and no network. This shim only picks the right one — and says plainly what is
+# wrong when there isn't one, because the alternative is a "command not found"
+# that reads like a broken install.
+set -eu
+
+dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+case $(uname -m) in
+	x86_64 | amd64) arch=amd64 ;;
+	arm64 | aarch64) arch=arm64 ;;
+	*) arch=$(uname -m) ;;
+esac
+
+target="$dir/$os-$arch/nv"
+if [ ! -x "$target" ]; then
+	echo "nv: no prebuilt binary for $os-$arch" >&2
+	echo "    Shipped: $(cd "$dir" && ls -d ./*/ 2>/dev/null | tr -d './' | tr '\n' ' ')" >&2
+	echo "    Windows is not supported yet; build from source with: make build" >&2
+	exit 1
+fi
+
+exec "$target" "$@"

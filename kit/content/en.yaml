@@ -1,0 +1,21 @@
+# The spoken script and everything the frame puts on screen, for one locale.
+#
+# `narration` keys are scene ids — they must match `scenes` in
+# video.config.yaml. `copy` is free-form nested structure: the `Copy` interface
+# in src/generated/content.ts is DERIVED from the default locale's shape, so
+# adding a field here is a YAML edit and TypeScript gets the type for free.
+#
+# A second language is `content/<code>.yaml` with the same shape, plus its
+# entry in `locales.list`. Nothing else moves.
+
+narration:
+  Title: "This is the loop, in ninety seconds."
+  Outro: "That is the whole cycle."
+
+copy:
+  title:
+    heading: "The autonomous loop"
+    subheading: "An explainer"
+  outro:
+    heading: "Where to go next"
+    links: ["README", "ADR index"]

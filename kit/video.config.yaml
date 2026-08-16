@@ -1,0 +1,97 @@
+kitVersion: 1
+
+video:
+  id: Explainer
+  width: 1920
+  height: 1080
+  fps: 30
+  # Cross-fade length, repaid once per scene boundary. `defaults.leadFrames`
+  # must cover it, or a line starts while the previous scene is still on screen.
+  transitionFrames: 14
+  # Floor below which fraction-cued reveals land on top of each other.
+  minSceneFrames: 60
+  out: out
+
+locales:
+  default: en
+  list:
+    - code: en
+      label: English
+      # Speaking rate, used ONLY to estimate lengths before any audio exists.
+      # Measured against the reference cut, not guessed.
+      charsPerSecond: 16.17
+      # The default locale is its own baseline, so nothing to budget for.
+      expansionFactor: 1.0
+      font: body
+      requiredSample: "The quick brown fox jumps over the lazy dog"
+
+# A face is declared per locale because covering latin says nothing about the
+# script you are about to add: a font can carry single diacritics and silently
+# drop the stacked ones another language is built from. `nv check` reads each
+# file's real cmap rather than trusting the subset it advertises.
+fonts:
+  body:
+    kind: google
+    family: Inter
+    importName: Inter
+    subsets: [latin]
+    weights: ["400", "600", "700"]
+  mono:
+    kind: google
+    family: Roboto Mono
+    importName: RobotoMono
+    subsets: [latin]
+    weights: ["400", "500"]
+
+# Emitted verbatim into src/generated/theme.ts. OKLCH because the renderer is
+# Chrome, which parses it natively — the video quotes your palette rather than
+# an approximation of it. Colour only: the type scale and the safe area are
+# layout decisions the components own.
+theme:
+  background: oklch(16% 0.01 13)
+  foreground: oklch(98% 0.003 13)
+  muted: oklch(70% 0.012 13)
+  surface: oklch(23% 0.01 13)
+  border: oklch(29% 0.008 13)
+  accent: oklch(71.2% 0.194 13.428)
+
+defaults:
+  # Silence at the head, and the frame the <Audio> mounts at. Wider than the
+  # cross-fade on purpose.
+  leadFrames: 14
+  # Silence after the voice stops, so the frame settles before the cut.
+  tailFrames: 24
+
+# Running order. A bare id takes the defaults; a table overrides them. A
+# narrated scene may NOT declare durationInFrames — that is how a hand-kept
+# frame table grows back after the derivation removed it.
+scenes:
+  - Title
+  - Outro
+
+tts:
+  # `silence` synthesizes correctly-sized silent audio: no account, no key, no
+  # network. Switch to `elevenlabs` when the script has settled.
+  provider: silence
+  apiKeyEnv: ELEVENLABS_API_KEY
+  costCapUsd: 2.0
+  outputFormat: mp3_44100_128
+  voices:
+    en:
+      voiceId: SAz9YHcvj6GT2YYXdXww
+      # Load-bearing per locale, and it fails silently: a multilingual model can
+      # speak a tonal language with the tones wrong and still return a clean 200
+      # and a plausible duration. Judge a new language by ear.
+      model: eleven_multilingual_v2
+      voiceSettings:
+        stability: 0.55
+        similarity_boost: 0.75
+        style: 0.15
+
+# Domain terms that must survive translation verbatim — a translated term stops
+# being greppable, and the audience says it in English anyway.
+glossary: []
+
+# Strings the system itself prints. Translating one makes the video contradict
+# the product it is explaining.
+printedLiterals: []

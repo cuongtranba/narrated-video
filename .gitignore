@@ -1,0 +1,10 @@
+# Local `make build` output. Anchored at the root on purpose — the committed
+# binaries under skills/narrated-video/bin/ are the whole point of the repo.
+/bin/
+
+node_modules/
+.DS_Store
+*.tar.gz
+
+# A project scaffolded for a quick try inside the repo.
+/demo/

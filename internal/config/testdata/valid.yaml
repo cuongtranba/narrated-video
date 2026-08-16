@@ -1,0 +1,88 @@
+kitVersion: 1
+
+video:
+  id: Explainer
+  width: 1920
+  height: 1080
+  fps: 30
+  transitionFrames: 14
+  minSceneFrames: 60
+  out: out
+
+locales:
+  default: en
+  list:
+    - code: en
+      label: English
+      font: body
+      charsPerSecond: 16.17
+      expansionFactor: 1.0
+      requiredSample: "The quick brown fox jumps over the lazy dog"
+    - code: vi
+      label: Tiếng Việt
+      font: bevietnam
+      charsPerSecond: 15.55
+      expansionFactor: 1.25
+      # The stacked vowels a latin-covering face drops in silence.
+      requiredSample: "tuyên bố ưỡn ữ ẫ ậ ố ầ ế ấ ư ơ đ Đ"
+
+fonts:
+  body:
+    kind: local
+    family: Body
+    files:
+      - path: fonts/body-regular.woff2
+        weight: "400"
+        style: normal
+  bevietnam:
+    kind: google
+    family: Be Vietnam Pro
+    importName: BeVietnamPro
+    subsets: [latin, vietnamese]
+    weights: ["400", "600"]
+
+theme:
+  background: oklch(0.16 0.012 13)
+  foreground: oklch(0.96 0.005 13)
+  muted: oklch(0.62 0.015 13)
+  accent: oklch(0.68 0.19 13)
+
+defaults:
+  leadFrames: 14
+  tailFrames: 24
+
+scenes:
+  - Title
+  - id: Iteration
+    tailFrames: 50 # holds after the voice stops — the silence is the argument
+  - id: Credits
+    durationInFrames: 120
+    narrated: false
+
+tts:
+  provider: silence
+  apiKeyEnv: ELEVENLABS_API_KEY
+  costCapUsd: 2.0
+  outputFormat: mp3_44100_128
+  voices:
+    en:
+      voiceId: SAz9YHcvj6GT2YYXdXww
+      model: eleven_multilingual_v2
+      voiceSettings:
+        stability: 0.55
+        similarity_boost: 0.75
+        style: 0.15
+    vi:
+      # No voiceSettings: this model does not want them, and settings tuned for
+      # another model are not tuning for this one.
+      voiceId: Na15FlRRkMEDtEW4nVVP
+      model: eleven_turbo_v2_5
+
+glossary:
+  - orchestrator
+  - worker
+  - loop
+
+printedLiterals:
+  - GOAL MET
+  - session_token

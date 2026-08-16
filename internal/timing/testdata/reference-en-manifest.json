@@ -1,0 +1,42 @@
+{
+  "Title": {
+    "sha256": "8a0b0247ac14eedba2c3d820033cb2aee7e1eb89124ae932427b8400006b35cf",
+    "seconds": 5.33,
+    "frames": 160
+  },
+  "Marathon": {
+    "sha256": "e7ff43751c522921a69690f769df81657db3e7d74c57ed33365526a7c93b0073",
+    "seconds": 12.46,
+    "frames": 374
+  },
+  "Arm": {
+    "sha256": "3d33d89aa98281e1180899228efec2e9b84338e0f612b83ef2b9bfe2b178ce27",
+    "seconds": 13.06,
+    "frames": 392
+  },
+  "Iteration": {
+    "sha256": "8f32a6d9fb90c02ce6468afd4b5a3f298c30acc48e241dbe682ca295a23597d1",
+    "seconds": 38.14,
+    "frames": 1145
+  },
+  "BlockedTools": {
+    "sha256": "49ebab93b0223a3ce34e4b7c7364b98c59d602ae76ddc43a7c69876086d1e587",
+    "seconds": 7.78,
+    "frames": 234
+  },
+  "Decision": {
+    "sha256": "7572b3327eadbd0a5d03bc08095fea2d523eaaaa21b444f62c82f182de2af7bf",
+    "seconds": 19.15,
+    "frames": 575
+  },
+  "Termination": {
+    "sha256": "45b82233e2ecfd07a859ccd1075c319f9293cb513f5718dfec09b5b37c537a89",
+    "seconds": 16.35,
+    "frames": 491
+  },
+  "Outro": {
+    "sha256": "b9a3581e5ac03806a65d513c9f12f39c6d169f883692c5ae16ccd3e485af8d28",
+    "seconds": 4.78,
+    "frames": 144
+  }
+}

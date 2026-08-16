@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: googleapis/release-please-action@v5.0.0
+        id: release
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - uses: actions/checkout@v7.0.1
+        if: ${{ steps.release.outputs.release_created }}
+
+      # The same binaries that are committed, published as release assets with
+      # checksums. A project scaffolded by `nv init` carries a shim that falls
+      # back to this download when the skill is not installed — CI, most often —
+      # so the release and that fallback path cannot drift apart.
+      - name: Attach the binaries and their checksums
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.release.outputs.tag_name }}
+        run: |
+          cd skills/narrated-video/bin
+          for dir in */; do
+            platform=${dir%/}
+            tar -czf "/tmp/nv-$platform.tar.gz" -C "$platform" nv
+          done
+          cd /tmp && sha256sum nv-*.tar.gz > checksums.txt
+          gh release upload "$TAG" /tmp/nv-*.tar.gz /tmp/checksums.txt --clobber

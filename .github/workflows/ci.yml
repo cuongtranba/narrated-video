@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.26.6"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Formatting
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  # The binaries are committed so an install needs no build. That only stays
+  # honest if a rebuild reproduces them: -trimpath with a pinned toolchain is
+  # byte-reproducible, so any difference means the committed artifact no longer
+  # matches the source that claims to produce it.
+  binary-parity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - run: make binaries
+
+      - name: Committed binaries match their source
+        run: |
+          if ! git diff --exit-code --stat skills/narrated-video/bin; then
+            echo "::error::Committed binaries differ from a rebuild. Run 'make binaries' and commit the result."
+            exit 1
+          fi
+
+  # Everything a user does on day one, using the binary just built. This is the
+  # test that would have caught the reference project's real failure: a video
+  # whose committed audio no longer matched its script.
+  end-to-end:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - uses: oven-sh/setup-bun@v2
+
+      - run: make build
+
+      - name: Scaffold, and expect exactly the two failures a fresh project has
+        run: |
+          mkdir -p /tmp/demo && cd /tmp/demo
+          "$GITHUB_WORKSPACE/bin/nv" init .
+
+          failing=$("$GITHUB_WORKSPACE/bin/nv" validate --json | jq -r '.[] | select(.OK == false) | .ID' | sort | tr '\n' ' ')
+          echo "failing: $failing"
+          [ "$failing" = "CHK-05 CHK-06 " ] || { echo "::error::expected CHK-05 and CHK-06, got: $failing"; exit 1; }
+
+      - name: Synthesize with no API key, then expect a clean gate
+        run: |
+          cd /tmp/demo
+          "$GITHUB_WORKSPACE/bin/nv" voiceover
+          "$GITHUB_WORKSPACE/bin/nv" validate
+
+      - name: Generated files are stable
+        run: |
+          cd /tmp/demo
+          "$GITHUB_WORKSPACE/bin/nv" sync
+          "$GITHUB_WORKSPACE/bin/nv" validate
+
+      # A new Remotion release breaking the template should surface here, not in
+      # someone's first hour with the tool.
+      - name: The scaffolded project type-checks and its compositions resolve
+        run: |
+          cd /tmp/demo
+          bun install
+          bunx tsc --noEmit
+          bunx remotion compositions src/index.ts

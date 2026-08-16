@@ -1,0 +1,10 @@
+node_modules/
+out/
+.env
+.DS_Store
+
+# src/generated/ IS committed. It is machine-owned but it is also what makes a
+# fresh clone type-check and open in Studio before `nv sync` has ever run.
+
+# public/voiceover/ IS committed too — audio in the repo is what lets someone
+# without an API key render the finished cut rather than a silent draft.

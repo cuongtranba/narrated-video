@@ -1,0 +1,13 @@
+# The prebuilt binaries must arrive as bytes.
+#
+# The `skills` CLI clones with the LFS filters explicitly disabled
+# (filter.lfs.smudge= and friends), so anything LFS-tracked lands in a user's
+# agent directory as a ~130-byte pointer file that fails with a message about
+# nothing recognisable. Do not add these paths to LFS.
+skills/narrated-video/bin/*/nv binary -filter -diff -merge
+
+# The shim beside them is a shell script and should stay readable in a diff.
+skills/narrated-video/bin/nv text eol=lf
+
+*.woff2 binary
+*.mp3 binary

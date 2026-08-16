@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "ci"
+
+# The kit's npm pins are deliberately not automated. A Remotion bump changes
+# what the template renders, and the end-to-end job type-checks a scaffolded
+# project — so those move by hand, with that gate green.
