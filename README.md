@@ -166,15 +166,18 @@ is self-sufficient and the installed skill stays at four binaries plus prose.
 Requires Go 1.26.6.
 
 ```bash
-make build       # → bin/nv
-make binaries    # cross-compile all four targets into skills/narrated-video/bin/
-make check       # gofmt -l, go vet, go test
-make all         # check + binaries
+make build    # → bin/nv  (local dev binary)
+make check    # gofmt -l, go vet, go test
 ```
 
+CI rebuilds `skills/narrated-video/bin/` automatically whenever `cmd/`,
+`internal/`, `kit/`, `go.mod`, or `go.sum` change and commits the result —
+so contributors do not need to run `make binaries` locally. `make binaries`
+remains available as a local debug command when you need to inspect a
+cross-compiled binary without waiting for CI.
+
 Built `CGO_ENABLED=0 -trimpath -ldflags="-s -w"`, which with a pinned toolchain is
-byte-reproducible — that is what lets a rebuild assert the committed binaries match
-their source. The binaries carry **no version stamp**, deliberately: writing one
+byte-reproducible. The binaries carry **no version stamp**, deliberately: writing one
 would change the artifact being compared. `nv version` prints a content hash
 instead.
 
