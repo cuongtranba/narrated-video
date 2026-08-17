@@ -140,6 +140,12 @@ of a fresh clone with no API key.
 default-locale id (`remotion render Explainer out/explainer.mp4`). For another
 locale: `bunx remotion render Explainer-vi out/explainer-vi.mp4`.
 
+Renaming `video.id` used to leave that script behind, and the break surfaced only
+after the voiceover had been paid for. `nv sync` now rewrites the id in
+`scripts.render` and `scripts.still`, and CHK-27 fails if a copy is edited out
+from under it. Only the id is claimed — flags and the output path are yours, and
+a script whose first token after the subcommand is a flag is left alone entirely.
+
 **Type errors in `src/fonts.ts` after adding a locale.** Intended.
 `bodyFamilyFor` is keyed by `Locale`, so a new language stops the build until a
 face is named for it.

@@ -66,7 +66,7 @@ func documentationFiles(t *testing.T, root string) []string {
 		}
 		if entry.IsDir() {
 			switch entry.Name() {
-			case ".git", "node_modules", "bin", "testdata":
+			case ".git", ".worktrees", "node_modules", "bin", "testdata":
 				return filepath.SkipDir
 			}
 			return nil

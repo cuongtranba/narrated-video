@@ -28,6 +28,7 @@ func buildPassingProject(t *testing.T) string {
 	for _, scene := range []string{"Title", "Iteration", "Credits"} {
 		writeFile(t, filepath.Join(root, "src", "scenes", scene+".tsx"), sceneSource)
 	}
+	writeFile(t, filepath.Join(root, "package.json"), basePackageJSON)
 
 	p, err := project.Load(root)
 	if err != nil {
@@ -134,6 +135,28 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		mutate   func(t *testing.T, root string) map[string]string
 		wantFail []string
 	}{
+		{
+			// The window is deliberately far from the fixture's real length, so
+			// the failure is the target and not an off-by-one in the arithmetic.
+			name: "a cut that outgrew its brief",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "video.config.yaml")
+				writeFile(t, path, strings.Replace(read(t, path),
+					"  minSceneFrames: 30\n",
+					"  minSceneFrames: 30\n  targetDuration:\n    minSeconds: 600\n    maxSeconds: 900\n", 1))
+				return nil
+			},
+			wantFail: []string{"CHK-26"},
+		},
+		{
+			name: "the composition renamed without a sync",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "package.json")
+				writeFile(t, path, strings.ReplaceAll(read(t, path), "Explainer", "Renamed"))
+				return nil
+			},
+			wantFail: []string{"CHK-27"},
+		},
 		{
 			name: "hand-edited timeline",
 			mutate: func(t *testing.T, root string) map[string]string {
@@ -391,6 +414,15 @@ func read(t *testing.T, path string) string {
 	}
 	return string(data)
 }
+
+const basePackageJSON = `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4",
+    "still": "remotion still Explainer out/explainer.png"
+  }
+}
+`
 
 const baseConfig = `kitVersion: 1
 video:

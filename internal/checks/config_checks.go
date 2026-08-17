@@ -10,6 +10,7 @@ import (
 
 	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/gen"
+	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/tts"
 )
 
@@ -280,4 +281,83 @@ func relTo(root, path string) string {
 		return rel
 	}
 	return path
+}
+
+// CHK-27. The composition id lives in video.config.yaml, but package.json's
+// render and still scripts carried a copy typed once by the template. Rename the
+// composition and `bun run render` points at one that no longer exists — a
+// failure that surfaces after the voiceover has been paid for.
+//
+// A script written in a form pkgscripts disowns is not a finding: nv claims the
+// id, not the command around it.
+func renderScriptsTargetComposition(kit *Kit) Result {
+	const id, title = "CHK-27", "the render scripts target the composition this config declares"
+
+	file, err := pkgscripts.Load(kit.Root)
+	if err != nil || file == nil {
+		return pass(id, title)
+	}
+
+	want := kit.Config.CompositionID(kit.Config.Locales.Default)
+	var findings []Finding
+	for _, name := range pkgscripts.Managed {
+		got, ok := file.Target(name)
+		if !ok || got == want {
+			continue
+		}
+		findings = append(findings, Finding{
+			Where:  pkgscripts.FileName + " scripts." + name,
+			Detail: fmt.Sprintf("renders %q, but video.id declares %q", got, want),
+		})
+	}
+	return fail(id, title, "run: nv sync", sortedFindings(findings))
+}
+
+// CHK-26. A script drifts longer one clarifying sentence at a time, and nobody
+// notices until the cut is watched end to end. The session this came from asked
+// for two to three minutes, wrote 3.5, and spent two rewrite rounds counting
+// words to find out — the tool already knew the number and had no way to say it.
+//
+// Silent until every scene is measured: an estimate carries real error, and
+// failing on a length that is not yet true would block work on a guess.
+func durationWithinTarget(kit *Kit) Result {
+	const id, title = "CHK-26", "the finished cut is inside the duration it was commissioned at"
+
+	target := kit.Config.Video.TargetDuration
+	if !target.Declared() {
+		return pass(id, title)
+	}
+
+	var findings []Finding
+	for _, locale := range kit.Config.LocaleCodes() {
+		timeline := kit.Timelines[locale]
+		if !timeline.Complete || timeline.FPS <= 0 {
+			continue
+		}
+		seconds := float64(timeline.TotalFrames) / float64(timeline.FPS)
+		if target.Covers(seconds) {
+			continue
+		}
+		findings = append(findings, Finding{
+			Where:  locale,
+			Detail: fmt.Sprintf("%s against a target of %s", clock(seconds), targetWindow(target)),
+		})
+	}
+	return fail(id, title, "cut or lengthen the narration, or widen video.targetDuration", sortedFindings(findings))
+}
+
+func targetWindow(t config.TargetDuration) string {
+	switch {
+	case t.MinSeconds > 0 && t.MaxSeconds > 0:
+		return clock(float64(t.MinSeconds)) + "–" + clock(float64(t.MaxSeconds))
+	case t.MaxSeconds > 0:
+		return "at most " + clock(float64(t.MaxSeconds))
+	default:
+		return "at least " + clock(float64(t.MinSeconds))
+	}
+}
+
+func clock(seconds float64) string {
+	total := int(seconds + 0.5)
+	return fmt.Sprintf("%dm%02ds", total/60, total%60)
 }

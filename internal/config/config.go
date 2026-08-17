@@ -34,13 +34,31 @@ type Config struct {
 }
 
 type Video struct {
-	ID               string `yaml:"id"`
-	Width            int    `yaml:"width"`
-	Height           int    `yaml:"height"`
-	FPS              int    `yaml:"fps"`
-	TransitionFrames int    `yaml:"transitionFrames"`
-	MinSceneFrames   int    `yaml:"minSceneFrames"`
-	Out              string `yaml:"out"`
+	ID               string         `yaml:"id"`
+	Width            int            `yaml:"width"`
+	Height           int            `yaml:"height"`
+	FPS              int            `yaml:"fps"`
+	TransitionFrames int            `yaml:"transitionFrames"`
+	MinSceneFrames   int            `yaml:"minSceneFrames"`
+	Out              string         `yaml:"out"`
+	TargetDuration   TargetDuration `yaml:"targetDuration"`
+}
+
+// TargetDuration is the length the video was commissioned at. Either bound may
+// stand alone, and zero means unbounded — a video with no declared target is a
+// normal video, not a misconfigured one.
+type TargetDuration struct {
+	MinSeconds int `yaml:"minSeconds"`
+	MaxSeconds int `yaml:"maxSeconds"`
+}
+
+func (t TargetDuration) Declared() bool { return t.MinSeconds > 0 || t.MaxSeconds > 0 }
+
+func (t TargetDuration) Covers(seconds float64) bool {
+	if t.MinSeconds > 0 && seconds < float64(t.MinSeconds) {
+		return false
+	}
+	return t.MaxSeconds <= 0 || seconds <= float64(t.MaxSeconds)
 }
 
 type Locales struct {

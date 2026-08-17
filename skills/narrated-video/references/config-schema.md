@@ -40,6 +40,28 @@ Integer ≥ 1. The schema generation this file was written against.
 | `transitionFrames` | integer ≥ 0 | `14` | Cross-fade length, subtracted once per scene boundary from the total. `defaults.leadFrames` must cover it (CHK-13). |
 | `minSceneFrames` | integer ≥ 1 | `60` | Floor below which fraction-cued reveals land on top of each other. CHK-25. |
 | `out` | string | `"out"` | Output directory. |
+| `targetDuration` | object | absent | The length this video was commissioned at. See below. |
+
+### `video.targetDuration`
+
+| field | type | default | notes |
+| --- | --- | --- | --- |
+| `minSeconds` | integer ≥ 0 | `0` | Unbounded when absent or zero. |
+| `maxSeconds` | integer ≥ 0 | `0` | Unbounded when absent or zero. |
+
+```yaml
+video:
+  targetDuration:
+    minSeconds: 120
+    maxSeconds: 180
+```
+
+Either bound may stand alone. `nv status` shows the projected length against the
+window from the first draft on; CHK-26 fails the gate once every scene is
+measured. Omit the key entirely and the check passes trivially — that, or
+widening the window, is the only way past it. There is no `--force`, because a
+flag that waves the gate through would cost `nv validate`'s exit code the one
+property it has.
 
 ## `locales`
 
@@ -175,6 +197,9 @@ video:
   transitionFrames: 14     # cross-fade; defaults.leadFrames must be >= this
   minSceneFrames: 60       # floor below which fraction cues collide
   out: out
+  targetDuration:          # optional; CHK-26 holds the measured cut to it
+    minSeconds: 120
+    maxSeconds: 180
 
 locales:
   default: en

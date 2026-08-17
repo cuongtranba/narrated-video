@@ -15,8 +15,11 @@ import (
 	"github.com/cuongtranba/narrated-video/internal/checks"
 	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/gen"
+	"github.com/cuongtranba/narrated-video/internal/pipeline"
+	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/project"
 	"github.com/cuongtranba/narrated-video/internal/scaffold"
+	"github.com/cuongtranba/narrated-video/internal/script"
 	"github.com/cuongtranba/narrated-video/internal/voiceover"
 )
 
@@ -76,6 +79,26 @@ func syncAt(dir string) error {
 		}
 		fmt.Printf("  %s\n", relTo(root, f.Path))
 	}
+	return retargetRenderScripts(root, p.Config.CompositionID(p.Config.Locales.Default))
+}
+
+// retargetRenderScripts keeps package.json's render and still scripts pointed at
+// the composition the config declares. Sync owns it for the same reason it owns
+// src/generated/: it is derived from the config, so a hand-kept copy is a copy
+// that eventually disagrees.
+func retargetRenderScripts(root, composition string) error {
+	file, err := pkgscripts.Load(root)
+	if err != nil || file == nil {
+		return err
+	}
+	data, changed := file.Retargeted(composition)
+	if !changed {
+		return nil
+	}
+	if err := os.WriteFile(file.Path, data, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("  %s\n", relTo(root, file.Path))
 	return nil
 }
 
@@ -103,6 +126,56 @@ func runValidate(_ context.Context, args []string) error {
 	if !checks.Passed(results) {
 		return errCheckFailed
 	}
+	return nil
+}
+
+// runStatus always exits 0. Reporting where a project is and gating whether it
+// is consistent are two questions, and `nv validate` already owns the second —
+// two commands whose exit codes mean different things is how a green run starts
+// meaning nothing.
+func runStatus(args []string) error {
+	flags, _ := splitArgs(args)
+
+	root, err := config.Find(".")
+	if err != nil {
+		return err
+	}
+	p, err := project.Load(root)
+	if err != nil {
+		return err
+	}
+
+	kit := checks.LoadKit(p, trackedTextFiles(root))
+	status := pipeline.Derive(kit, checks.Run(kit))
+
+	if flags["json"] == "true" {
+		return printJSON(status)
+	}
+	status.Write(os.Stdout)
+	return nil
+}
+
+func runScript(args []string) error {
+	_, rest := splitArgs(args)
+
+	root, err := config.Find(".")
+	if err != nil {
+		return err
+	}
+	p, err := project.Load(root)
+	if err != nil {
+		return err
+	}
+
+	locale := ""
+	if len(rest) > 0 {
+		locale = rest[0]
+	}
+	out, err := script.Render(p, locale)
+	if err != nil {
+		return err
+	}
+	fmt.Print(out)
 	return nil
 }
 

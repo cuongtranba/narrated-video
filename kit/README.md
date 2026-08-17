@@ -4,10 +4,14 @@ A Remotion project whose timing comes from measured audio rather than from a
 table someone maintains by hand.
 
 ```bash
+nv status          # where this project is, and the one command to run next
 bun install
 bun run studio     # every scene is also its own composition
 bun run render     # → out/explainer.mp4
 ```
+
+`nv status` derives its answer from the files here, so it is never a plan that
+has fallen out of date. Run it whenever you are unsure what to do next.
 
 ## How a change flows
 
@@ -17,7 +21,7 @@ direction only:
 ```
 video.config.yaml  ─┐
 content/<locale>.yaml ├─→ nv sync ─→ src/generated/* ─→ components
-measured audio     ─┘
+measured audio     ─┘            └─→ package.json (the composition id)
 ```
 
 Nothing flows back. **Every file under `src/generated/` is overwritten by
@@ -30,6 +34,8 @@ Nothing flows back. **Every file under `src/generated/` is overwritten by
 | add a language | `locales.list` + a new `content/<code>.yaml` |
 | change the palette | `theme:` in `video.config.yaml` |
 | change how long a scene runs | record the narration — that IS the length |
+| hand someone a readable script | nothing — run `nv script <locale>` |
+| hold the cut to a length | `video.targetDuration`, then `nv status` |
 
 Then: `nv sync`, `nv validate`, `bun run typecheck`.
 
