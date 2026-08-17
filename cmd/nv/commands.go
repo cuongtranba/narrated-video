@@ -15,6 +15,7 @@ import (
 	"github.com/cuongtranba/narrated-video/internal/checks"
 	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/gen"
+	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/project"
 	"github.com/cuongtranba/narrated-video/internal/scaffold"
 	"github.com/cuongtranba/narrated-video/internal/voiceover"
@@ -76,6 +77,26 @@ func syncAt(dir string) error {
 		}
 		fmt.Printf("  %s\n", relTo(root, f.Path))
 	}
+	return retargetRenderScripts(root, p.Config.CompositionID(p.Config.Locales.Default))
+}
+
+// retargetRenderScripts keeps package.json's render and still scripts pointed at
+// the composition the config declares. Sync owns it for the same reason it owns
+// src/generated/: it is derived from the config, so a hand-kept copy is a copy
+// that eventually disagrees.
+func retargetRenderScripts(root, composition string) error {
+	file, err := pkgscripts.Load(root)
+	if err != nil || file == nil {
+		return err
+	}
+	data, changed := file.Retargeted(composition)
+	if !changed {
+		return nil
+	}
+	if err := os.WriteFile(file.Path, data, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("  %s\n", relTo(root, file.Path))
 	return nil
 }
 

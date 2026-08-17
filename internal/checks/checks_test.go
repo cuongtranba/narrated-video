@@ -28,6 +28,7 @@ func buildPassingProject(t *testing.T) string {
 	for _, scene := range []string{"Title", "Iteration", "Credits"} {
 		writeFile(t, filepath.Join(root, "src", "scenes", scene+".tsx"), sceneSource)
 	}
+	writeFile(t, filepath.Join(root, "package.json"), basePackageJSON)
 
 	p, err := project.Load(root)
 	if err != nil {
@@ -134,6 +135,15 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		mutate   func(t *testing.T, root string) map[string]string
 		wantFail []string
 	}{
+		{
+			name: "the composition renamed without a sync",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "package.json")
+				writeFile(t, path, strings.ReplaceAll(read(t, path), "Explainer", "Renamed"))
+				return nil
+			},
+			wantFail: []string{"CHK-27"},
+		},
 		{
 			name: "hand-edited timeline",
 			mutate: func(t *testing.T, root string) map[string]string {
@@ -391,6 +401,15 @@ func read(t *testing.T, path string) string {
 	}
 	return string(data)
 }
+
+const basePackageJSON = `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4",
+    "still": "remotion still Explainer out/explainer.png"
+  }
+}
+`
 
 const baseConfig = `kitVersion: 1
 video:

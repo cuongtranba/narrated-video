@@ -10,6 +10,7 @@ import (
 
 	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/gen"
+	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/tts"
 )
 
@@ -280,4 +281,34 @@ func relTo(root, path string) string {
 		return rel
 	}
 	return path
+}
+
+// CHK-27. The composition id lives in video.config.yaml, but package.json's
+// render and still scripts carried a copy typed once by the template. Rename the
+// composition and `bun run render` points at one that no longer exists — a
+// failure that surfaces after the voiceover has been paid for.
+//
+// A script written in a form pkgscripts disowns is not a finding: nv claims the
+// id, not the command around it.
+func renderScriptsTargetComposition(kit *Kit) Result {
+	const id, title = "CHK-27", "the render scripts target the composition this config declares"
+
+	file, err := pkgscripts.Load(kit.Root)
+	if err != nil || file == nil {
+		return pass(id, title)
+	}
+
+	want := kit.Config.CompositionID(kit.Config.Locales.Default)
+	var findings []Finding
+	for _, name := range pkgscripts.Managed {
+		got, ok := file.Target(name)
+		if !ok || got == want {
+			continue
+		}
+		findings = append(findings, Finding{
+			Where:  pkgscripts.FileName + " scripts." + name,
+			Detail: fmt.Sprintf("renders %q, but video.id declares %q", got, want),
+		})
+	}
+	return fail(id, title, "run: nv sync", sortedFindings(findings))
 }
