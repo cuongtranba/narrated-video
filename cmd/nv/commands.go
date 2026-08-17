@@ -15,9 +15,11 @@ import (
 	"github.com/cuongtranba/narrated-video/internal/checks"
 	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/gen"
+	"github.com/cuongtranba/narrated-video/internal/pipeline"
 	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/project"
 	"github.com/cuongtranba/narrated-video/internal/scaffold"
+	"github.com/cuongtranba/narrated-video/internal/script"
 	"github.com/cuongtranba/narrated-video/internal/voiceover"
 )
 
@@ -124,6 +126,56 @@ func runValidate(_ context.Context, args []string) error {
 	if !checks.Passed(results) {
 		return errCheckFailed
 	}
+	return nil
+}
+
+// runStatus always exits 0. Reporting where a project is and gating whether it
+// is consistent are two questions, and `nv validate` already owns the second —
+// two commands whose exit codes mean different things is how a green run starts
+// meaning nothing.
+func runStatus(args []string) error {
+	flags, _ := splitArgs(args)
+
+	root, err := config.Find(".")
+	if err != nil {
+		return err
+	}
+	p, err := project.Load(root)
+	if err != nil {
+		return err
+	}
+
+	kit := checks.LoadKit(p, trackedTextFiles(root))
+	status := pipeline.Derive(kit, checks.Run(kit))
+
+	if flags["json"] == "true" {
+		return printJSON(status)
+	}
+	status.Write(os.Stdout)
+	return nil
+}
+
+func runScript(args []string) error {
+	_, rest := splitArgs(args)
+
+	root, err := config.Find(".")
+	if err != nil {
+		return err
+	}
+	p, err := project.Load(root)
+	if err != nil {
+		return err
+	}
+
+	locale := ""
+	if len(rest) > 0 {
+		locale = rest[0]
+	}
+	out, err := script.Render(p, locale)
+	if err != nil {
+		return err
+	}
+	fmt.Print(out)
 	return nil
 }
 

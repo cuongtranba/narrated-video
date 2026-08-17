@@ -72,10 +72,11 @@ func resolveLocales(p *project.Project, requested []string) ([]config.Locale, er
 	return out, nil
 }
 
-// checkSpend estimates before the first request rather than after the last.
-// Synthesis is billed per character and a loop over locales multiplies it
-// quietly; the ceiling is the config's, so it is reviewed with everything else.
-func checkSpend(p *project.Project, provider tts.Provider, locales []config.Locale, force bool, out io.Writer) error {
+// EstimateSpend reports the characters a run would send and what it would cost.
+// Exported so `nv status` quotes the same number `nv voiceover` will enforce:
+// two implementations of a price would eventually disagree, and the one the
+// operator read is not the one that bills.
+func EstimateSpend(p *project.Project, provider tts.Provider, locales []config.Locale) (int, float64) {
 	characters := 0
 	estimate := 0.0
 	for _, locale := range locales {
@@ -86,6 +87,14 @@ func checkSpend(p *project.Project, provider tts.Provider, locales []config.Loca
 			estimate += float64(len([]rune(line))) / 1000 * provider.PricePer1kChars(voice.Model)
 		}
 	}
+	return characters, estimate
+}
+
+// checkSpend estimates before the first request rather than after the last.
+// Synthesis is billed per character and a loop over locales multiplies it
+// quietly; the ceiling is the config's, so it is reviewed with everything else.
+func checkSpend(p *project.Project, provider tts.Provider, locales []config.Locale, force bool, out io.Writer) error {
+	characters, estimate := EstimateSpend(p, provider, locales)
 
 	fmt.Fprintf(out, "%d characters across %d locale(s), estimated $%.2f (cap $%.2f)\n",
 		characters, len(locales), estimate, p.Config.TTS.CostCapUSD)

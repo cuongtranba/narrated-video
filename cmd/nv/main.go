@@ -21,9 +21,11 @@ import (
 const usage = `nv — narrated explainer videos
 
   nv init [dir]            scaffold a project (--scene <Id> adds one scene)
+  nv status [--json]       where the project is, and the one command to run next
   nv sync                  regenerate src/generated/ from the config and the audio
   nv validate [--json]     run every check; exit 1 if any fails
   nv voiceover [locale…]   synthesize narration and measure it (--force ignores the spend cap)
+  nv script [locale]       write the readable script to stdout, from the content file
   nv version               print the build's content hash
 
 Run from anywhere inside a project; the root is found by walking up.
@@ -35,9 +37,11 @@ Run from anywhere inside a project; the root is found by walking up.
 // perfectly plausible command and is not one.
 var commands = map[string]func(context.Context, []string) error{
 	"init":      func(_ context.Context, args []string) error { return runInit(args) },
+	"status":    func(_ context.Context, args []string) error { return runStatus(args) },
 	"sync":      func(_ context.Context, args []string) error { return runSync(args) },
 	"validate":  runValidate,
 	"voiceover": runVoiceover,
+	"script":    func(_ context.Context, args []string) error { return runScript(args) },
 	"version":   func(context.Context, []string) error { return runVersion() },
 }
 
