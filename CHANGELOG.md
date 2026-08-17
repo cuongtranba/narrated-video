@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/cuongtranba/narrated-video/compare/v0.3.0...v0.4.0) (2026-08-17)
+
+
+### Features
+
+* **nv:** derive the pipeline, the script and the render target ([#4](https://github.com/cuongtranba/narrated-video/issues/4)) ([d57c6bf](https://github.com/cuongtranba/narrated-video/commit/d57c6bfe7ae19d3a7799e46eb0808893c88bfffe))
+
 ## [0.3.0](https://github.com/cuongtranba/narrated-video/compare/v0.2.0...v0.3.0) (2026-08-16)
 
 
