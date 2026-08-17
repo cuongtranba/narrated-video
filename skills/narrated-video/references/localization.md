@@ -31,6 +31,25 @@ key fails to compile rather than rendering an empty box.
 Every locale's file has the same shape as the default's. That is not a convention;
 it is CHK-11.
 
+## Publishing the script
+
+The spoken lines live here and nowhere else. When someone needs a readable
+script — a reviewer, a voice actor, a doc — generate it rather than writing a
+second copy:
+
+```bash
+nv script vi > docs/video-scripts/explainer-vi.md
+```
+
+The output carries each scene's timecode, length and whether that length is
+measured or estimated, then the narration verbatim, then the on-screen copy.
+
+A script drafted as prose in a doc and copied into the yaml afterwards is two
+files that agree until the first edit, and the edit always comes — a line written
+to be read is not yet a line written to be spoken. The session this command comes
+from wrote the doc first, then rewrote it at the end because the spoken lines had
+changed underneath it. Regenerate instead; there is nothing to keep in sync.
+
 ## Three kinds of string
 
 The single most useful distinction when translating:

@@ -1,4 +1,4 @@
-# The 25 checks
+# The 27 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -14,10 +14,10 @@ Remedies below are the exact strings the tool prints.
 - [Generation and config: CHK-01 – CHK-04](#generation-and-config)
 - [Audio: CHK-05 – CHK-10](#audio)
 - [Copy and localization: CHK-11, CHK-14 – CHK-17](#copy-and-localization)
-- [Scene shape and timing: CHK-12, CHK-13, CHK-25](#scene-shape-and-timing)
+- [Scene shape and timing: CHK-12, CHK-13, CHK-25, CHK-26](#scene-shape-and-timing)
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
-- [Source discipline: CHK-21 – CHK-24](#source-discipline)
+- [Source discipline: CHK-21 – CHK-24, CHK-27](#source-discipline)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
 
 ## Generation and config
@@ -215,6 +215,26 @@ Remedy: `lengthen the line, raise tailFrames, or lower video.minSceneFrames`
 Reveals are cued as fractions, so a short scene collapses them onto each other and
 the frame flashes through its own content.
 
+### CHK-26 — the finished cut is inside the duration it was commissioned at
+
+Divides each locale's `totalFrames` by `fps` and compares against
+`video.targetDuration`. Silent unless that key is present, and silent for any
+locale whose timeline is not yet complete.
+
+Remedy: `cut or lengthen the narration, or widen video.targetDuration`
+
+A script drifts longer one clarifying sentence at a time, and nobody notices
+until the cut is watched end to end. The session this check comes from asked for
+two to three minutes, wrote three and a half, and spent two rewrite rounds
+counting words to find out — while the tool already held the number.
+
+Two deliberate limits. It waits for measured audio, because an estimate carries
+real error and failing on a length that is not yet true would block work on a
+guess; `nv status` shows the estimate against the target from the first draft on,
+where being advisory is the right register. And there is no `--force`: the escape
+is to widen or drop `targetDuration`, because a flag that waves the gate through
+would cost the exit code the one property it has.
+
 ## Fonts
 
 ### CHK-18 — each locale's font has a glyph for every character it needs
@@ -295,6 +315,26 @@ Fails on a config entry with no `src/scenes/<Id>.tsx`, and on a `.tsx` in that
 directory (not prefixed `_`) that no config entry refers to.
 
 Remedy: `add the scene to video.config.yaml (nv init --scene <Id> scaffolds one), or delete the orphan module`
+
+### CHK-27 — the render scripts target the composition this config declares
+
+Reads `package.json`, and for each of `scripts.render` and `scripts.still` takes
+the token immediately after `remotion render` / `remotion still` as the
+composition id. Fails when that id is not `video.id` (the default locale's
+composition).
+
+Remedy: `run: nv sync`
+
+The id had two homes. `nv sync` writes it into `src/generated/`, while
+`package.json` carried a copy typed once by the template — so renaming the
+composition left `bun run render` pointing at one that no longer exists, and the
+failure arrives after the voiceover has been paid for.
+
+`nv sync` now rewrites that token, and this check catches a copy edited out from
+under it. Only the id is claimed: flags, the output path, and any script whose
+first token after the subcommand is a flag are left alone, and a `package.json`
+that is absent or unreadable passes — it belongs to the JavaScript project, not
+to `nv`.
 
 ## What is deliberately excluded
 

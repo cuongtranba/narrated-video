@@ -6,18 +6,37 @@ description: Build and maintain narrated explainer videos in Remotion. Use for a
 # narrated-video
 
 `nv` is a prebuilt binary that scaffolds a Remotion project, derives every scene's
-length from measured audio, synthesizes narration, and gates the result with 25
+length from measured audio, synthesizes narration, and gates the result with 27
 checks. The project it writes contains no build tooling of its own — a broken
 `node_modules` can change what renders, but it cannot change what the gate says.
+
+## The loop
+
+```bash
+nv status        # where the project is, and the one command to run next
+<that command>
+nv status        # again
+```
+
+Run it at the start of a turn and after every step. It derives each stage from
+the files on disk — the config, the content, the manifests, the 27 checks — so it
+is never a plan someone is keeping up to date; it is what the project is.
+
+Do not reconstruct the running order from memory or from this file. Prose
+describes the pipeline; `nv status` computes it, and only one of those two can be
+wrong. `--json` carries the same data with `.next.command` spelled out.
 
 ## Routing
 
 | Task | Read | Start with |
 | --- | --- | --- |
+| Anything, at any point | — | `nv status` |
 | New video from nothing | this file, then `references/config-schema.md` | `nv init <dir>` |
 | Add a scene | `references/scene-registry.md` | `nv init --scene <Id>` |
 | Add a language / translate | `references/localization.md`, `references/fonts.md` | `locales.list` + `content/<code>.yaml` |
 | Edit copy or narration | `references/localization.md` | `content/<locale>.yaml`, then `nv sync` |
+| Publish the script for a human | `references/localization.md` | `nv script <locale> > docs/…` |
+| The cut is the wrong length | `references/config-schema.md` | `video.targetDuration`, then `nv status` |
 | A check is failing | `references/validate-checks.md` | the remedy line the failure printed |
 
 Also here: `references/timing-model.md` (why lengths are derived and how),
@@ -36,9 +55,10 @@ at install time. `bin/nv` is a POSIX shim that picks `darwin-arm64`,
 `darwin-amd64`, `linux-amd64` or `linux-arm64`. Windows is not supported yet, and
 the shim says so rather than failing obscurely.
 
-Commands: `init [dir]` (`--scene <Id>`), `sync`, `validate` (`--json`),
-`voiceover [locale…]` (`--force`), `version`. Run any of them from anywhere
-inside a project — the root is found by walking up, like `git`.
+Commands: `init [dir]` (`--scene <Id>`), `status` (`--json`), `sync`,
+`validate` (`--json`), `voiceover [locale…]` (`--force`), `script [locale]`,
+`version`. Run any of them from anywhere inside a project — the root is found by
+walking up, like `git`.
 
 ## New video
 
@@ -46,13 +66,14 @@ inside a project — the root is found by walking up, like `git`.
 nv init my-video && cd my-video
 # wrote 28 files to my-video
 
-nv validate      # exit 1 — CHK-05 and CHK-06, because no audio exists yet
+nv status        # ▸ voiceover — 0/2 scenes measured; next: nv voiceover
 nv voiceover     # provider `silence`: no API key, no network
 # Title  2.22s  67f
 # Outro  1.49s  45f
 # then it regenerates src/generated/ automatically
 
-nv validate      # exit 0 — "25 checks passed"
+nv status        # ▸ render — gate green; next: bun install && bun run render
+nv validate      # exit 0 — "27 checks passed"
 bun install && bun run studio
 ```
 
@@ -72,6 +93,34 @@ and a project `README.md`.
 Then: edit `video.config.yaml` (id, size, fps, theme, scenes, locales) and
 `content/en.yaml` (the spoken lines and every on-screen string), write the
 scenes, `nv sync`, `nv validate`.
+
+## The script
+
+The spoken lines live in `content/<locale>.yaml` and nowhere else. To hand a
+human something readable, generate it:
+
+```bash
+nv script vi > docs/video-scripts/explainer-vi.md
+```
+
+Do not write the script as prose in a doc and copy it into the yaml afterwards.
+That is two files which agree until the first edit, and the edit always comes —
+a line written to be read is not yet a line written to be spoken. Regenerate
+instead; there is nothing to keep in sync.
+
+Declare the length you were asked for and let the tool hold you to it:
+
+```yaml
+video:
+  targetDuration:
+    minSeconds: 120
+    maxSeconds: 180
+```
+
+`nv status` shows the projected length against that window from the first draft
+on, and CHK-26 fails the gate once every scene is measured. It stays silent
+while the length is only an estimate — an estimate carries real error, and
+failing on a number that is not yet true would block work on a guess.
 
 ## The timing model
 
@@ -112,7 +161,7 @@ a fresh clone, and the render wears an `UNVOICED` badge until real audio exists.
 
 ## The gate
 
-`nv validate` runs all 25 checks — no fail-fast — and exits 1 if any fail. Each
+`nv validate` runs all 27 checks — no fail-fast — and exits 1 if any fail. Each
 failure prints where it is and one imperative remedy line. `--json` for CI.
 
 It reads no pixels, asks no model to judge prose, and touches no network or API
@@ -126,11 +175,12 @@ something shipped wrong; `references/validate-checks.md` says what, per check.
 
 ## Done means
 
-1. `nv validate` exits 0 — "25 checks passed".
+1. `nv validate` exits 0 — "27 checks passed".
 2. No `UNVOICED` badge in the render. The badge cannot be switched off by a flag,
    only by having measured audio for every narrated scene, because a silent draft
    that looks finished is how a wrong cut escapes.
 3. `bun run render` produces the file (`out/explainer.mp4` by default).
+4. `nv status` reports nothing outstanding.
 
 `bun run typecheck` and `bun run lint` cover what the gate deliberately does not:
 the gate answers questions about the project's data, TypeScript answers questions

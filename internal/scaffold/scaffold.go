@@ -60,7 +60,10 @@ func Project(dir string, out io.Writer) error {
 	}
 	written++
 
-	fmt.Fprintf(out, "wrote %d files to %s\n\nNext:\n  cd %s\n  bun install\n  nv voiceover     # provider: silence — no API key needed\n  nv validate\n  bun run studio\n",
+	// One next step, not five. The running order is derived, so pointing at the
+	// command that derives it beats a list that goes stale the moment the
+	// pipeline gains a stage.
+	fmt.Fprintf(out, "wrote %d files to %s\n\nNext:\n  cd %s\n  nv status        # the stage you are on, and the command that follows\n",
 		written, dir, dir)
 	return nil
 }
@@ -98,7 +101,7 @@ func AddScene(root, id string, out io.Writer) error {
 		return err
 	}
 
-	fmt.Fprintf(out, "wrote src/scenes/%s.tsx and added it to video.config.yaml\n\nNext:\n  add its narration line to content/<locale>.yaml\n  nv sync\n", id)
+	fmt.Fprintf(out, "wrote src/scenes/%s.tsx and added it to video.config.yaml\n\nNext:\n  add its narration line to content/<locale>.yaml\n  nv status\n", id)
 	return nil
 }
 

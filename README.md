@@ -4,7 +4,7 @@ A skill that ships a prebuilt gate for narrated explainer videos.
 
 `nv` is a single static Go binary. It scaffolds a [Remotion](https://remotion.dev)
 project, derives every scene's length from **measured** audio, synthesizes the
-narration, and runs 25 checks whose exit code is the contract. The project it
+narration, and runs 27 checks whose exit code is the contract. The project it
 writes carries no build tooling of its own — no `scripts/`, no `ajv`, no YAML
 library — so a broken `node_modules` can change what renders but cannot change
 what the gate says.
@@ -23,11 +23,35 @@ time.
 
 ```bash
 nv init my-video && cd my-video     # wrote 28 files
-nv validate                         # exit 1 — CHK-05 and CHK-06 only
+nv status                           # ▸ voiceover — next: nv voiceover
 nv voiceover                        # provider `silence`: no API key, no network
-nv validate                         # exit 0 — "25 checks passed"
+nv validate                         # exit 0 — "27 checks passed"
 bun install && bun run studio
 ```
+
+`nv status` derives where a project is from the files on disk and names the one
+command to run next. It is the same data `nv validate` decides on, projected onto
+the running order, so a status cannot disagree with the gate:
+
+```
+Explainer · en
+
+  ✔ scaffold   config valid, 2 scenes, 1 locale(s)
+  ✔ script     2/2 lines written
+  ✔ scenes     2 modules, all declared
+  ▸ voiceover  0/2 scenes measured
+  · gate       2 failing: CHK-05, CHK-06
+  · render     nothing in out/
+
+  duration   en  0m06s estimated
+  spend      60 characters, $0.00 of $2.00 via silence
+
+  next: nv voiceover
+        0/2 scenes measured
+```
+
+`--json` carries the same structure with `.next.command` spelled out, so a tool
+driving this reads the next step instead of inferring it.
 
 Real output from `nv voiceover` on a fresh scaffold:
 
@@ -43,9 +67,10 @@ regenerating:
   ...
 ```
 
-Commands: `init [dir]` (`--scene <Id>`), `sync`, `validate` (`--json`),
-`voiceover [locale…]` (`--force`), `version`. Run any of them from anywhere inside
-a project — the root is found by walking up, like `git`.
+Commands: `init [dir]` (`--scene <Id>`), `status` (`--json`), `sync`,
+`validate` (`--json`), `voiceover [locale…]` (`--force`), `script [locale]`,
+`version`. Run any of them from anywhere inside a project — the root is found by
+walking up, like `git`.
 
 ## Why
 
@@ -75,14 +100,34 @@ wrong:
 
 Plus 28 `tsc` runs, 15 `eslint` runs, 14 renders and 20 stills read back by eye.
 
+A second measured session, this one already using `nv`, produced a 2:17 cut in
+**34 minutes** — of which roughly six were rework, and every minute of it came
+from state the project already held and no command would say:
+
+- **The narration had two homes.** Drafted as prose in a doc, re-typed into
+  `content/vi.yaml`, then the doc rewritten at the end because the spoken lines
+  had changed underneath it. → `nv script` renders the doc *from* the yaml.
+- **The length was guessed with `wc -w`** and trimmed twice ("that barely
+  moved"), while `internal/timing` already computed it.
+  → `video.targetDuration`, CHK-26, and a duration line in `nv status`.
+- **`package.json` still said `remotion render Explainer`** after the composition
+  was renamed — caught by reading the file, after the voiceover was paid for.
+  → `nv sync` owns that id; CHK-27 catches a copy edited out from under it.
+- **The running order was reconstructed from prose each turn.**
+  → `nv status` computes it.
+
 ## How it fits together
 
 ```
 video.config.yaml ──┐
                     ├──► nv sync ──► src/generated/timeline.ts   (data only)
-public/voiceover/  ─┘            └──► src/generated/registry.ts  (component bindings)
-   <locale>/manifest.json
-                    └──► nv validate ──► exit 0 | exit 1 + remedies
+public/voiceover/  ─┘            ├──► src/generated/registry.ts  (component bindings)
+   <locale>/manifest.json        └──► package.json               (composition id)
+                    │
+content/*.yaml ─────┼──► nv script ──► the readable script, on stdout
+                    │
+                    ├──► nv validate ──► exit 0 | exit 1 + remedies
+                    └──► nv status ────► the stage you are on, and the next command
 ```
 
 Unidirectional: config and measurements → generated code → Remotion. Nothing flows
@@ -100,7 +145,10 @@ internal/gen/               the TypeScript codegen
 internal/tts/               provider interface + elevenlabs, silence, say
 internal/mp3/               MPEG frame-header duration measurement
 internal/fonts/             woff2/sfnt cmap reader, unicode-range parser, NFC
-internal/checks/            the 25 checks
+internal/checks/            the 27 checks
+internal/pipeline/          nv status — the checks projected onto the running order
+internal/script/            nv script — the readable script, rendered from content/
+internal/pkgscripts/        the composition id inside package.json's render scripts
 internal/scaffold/          nv init
 internal/schema/            video.schema.json
 kit/                        //go:embed — the Remotion project template

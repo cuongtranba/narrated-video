@@ -8,3 +8,8 @@ node_modules/
 
 # A project scaffolded for a quick try inside the repo.
 /demo/
+
+# Git worktrees kept beside the checkout. They hold a second copy of every doc
+# in the repo, which the docs drift test would otherwise walk and judge against
+# the wrong branch's command list.
+/.worktrees/

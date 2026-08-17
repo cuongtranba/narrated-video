@@ -147,8 +147,13 @@ func TestDerive_RenderIsCurrentOnceTheGateIsGreen(t *testing.T) {
 	if got := stage(t, status, "render").State; got != pipeline.Current {
 		t.Fatalf("render = %s, want %s", got, pipeline.Current)
 	}
-	if status.Next.Command != "bun run render" {
-		t.Errorf("next = %q, want %q", status.Next.Command, "bun run render")
+	if status.Next.Command != "bun install && bun run render" {
+		t.Errorf("next = %q, want the install to be named", status.Next.Command)
+	}
+
+	write(t, filepath.Join(root, "node_modules", "remotion", "package.json"), "{}")
+	if got := derive(t, root).Next.Command; got != "bun run render" {
+		t.Errorf("next = %q, want %q once dependencies exist", got, "bun run render")
 	}
 }
 

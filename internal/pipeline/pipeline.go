@@ -230,7 +230,7 @@ func gateStage(failing []string) Stage {
 // never move an exit code: a render that predates its audio is a fact about the
 // file, not about whether the project is consistent.
 func renderStage(kit *checks.Kit) Stage {
-	stage := Stage{ID: "render", Title: "rendered file", Command: "bun run render"}
+	stage := Stage{ID: "render", Title: "rendered file", Command: renderCommand(kit.Root)}
 
 	newest, at, found := newestRender(filepath.Join(kit.Root, kit.Config.Video.Out))
 	if !found {
@@ -244,6 +244,16 @@ func renderStage(kit *checks.Kit) Stage {
 	stage.State = Done
 	stage.Detail = newest
 	return stage
+}
+
+// renderCommand names the dependency install when there is nothing to render
+// with. The scaffold points at `nv status` rather than listing steps, so the
+// step it no longer lists has to be derivable.
+func renderCommand(root string) string {
+	if _, err := os.Stat(filepath.Join(root, "node_modules")); err != nil {
+		return "bun install && bun run render"
+	}
+	return "bun run render"
 }
 
 func newestRender(dir string) (string, time.Time, bool) {
