@@ -85,6 +85,7 @@ func All() []Check {
 		timelineIsBundlerFree,
 		registryParity,
 		minSceneDuration,
+		durationWithinTarget,
 		renderScriptsTargetComposition,
 	}
 }

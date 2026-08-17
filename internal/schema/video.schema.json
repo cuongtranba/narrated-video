@@ -37,7 +37,16 @@
           "default": 60,
           "description": "Floor below which fraction-cued reveals collide. Enforced by CHK-25."
         },
-        "out": { "type": "string", "default": "out" }
+        "out": { "type": "string", "default": "out" },
+        "targetDuration": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The length this video was commissioned at. Enforced by CHK-26 once every scene is measured. Either bound may stand alone; omit the key for no target.",
+          "properties": {
+            "minSeconds": { "type": "integer", "minimum": 0 },
+            "maxSeconds": { "type": "integer", "minimum": 0 }
+          }
+        }
       }
     },
 

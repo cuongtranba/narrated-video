@@ -312,3 +312,52 @@ func renderScriptsTargetComposition(kit *Kit) Result {
 	}
 	return fail(id, title, "run: nv sync", sortedFindings(findings))
 }
+
+// CHK-26. A script drifts longer one clarifying sentence at a time, and nobody
+// notices until the cut is watched end to end. The session this came from asked
+// for two to three minutes, wrote 3.5, and spent two rewrite rounds counting
+// words to find out — the tool already knew the number and had no way to say it.
+//
+// Silent until every scene is measured: an estimate carries real error, and
+// failing on a length that is not yet true would block work on a guess.
+func durationWithinTarget(kit *Kit) Result {
+	const id, title = "CHK-26", "the finished cut is inside the duration it was commissioned at"
+
+	target := kit.Config.Video.TargetDuration
+	if !target.Declared() {
+		return pass(id, title)
+	}
+
+	var findings []Finding
+	for _, locale := range kit.Config.LocaleCodes() {
+		timeline := kit.Timelines[locale]
+		if !timeline.Complete || timeline.FPS <= 0 {
+			continue
+		}
+		seconds := float64(timeline.TotalFrames) / float64(timeline.FPS)
+		if target.Covers(seconds) {
+			continue
+		}
+		findings = append(findings, Finding{
+			Where:  locale,
+			Detail: fmt.Sprintf("%s against a target of %s", clock(seconds), targetWindow(target)),
+		})
+	}
+	return fail(id, title, "cut or lengthen the narration, or widen video.targetDuration", sortedFindings(findings))
+}
+
+func targetWindow(t config.TargetDuration) string {
+	switch {
+	case t.MinSeconds > 0 && t.MaxSeconds > 0:
+		return clock(float64(t.MinSeconds)) + "–" + clock(float64(t.MaxSeconds))
+	case t.MaxSeconds > 0:
+		return "at most " + clock(float64(t.MaxSeconds))
+	default:
+		return "at least " + clock(float64(t.MinSeconds))
+	}
+}
+
+func clock(seconds float64) string {
+	total := int(seconds + 0.5)
+	return fmt.Sprintf("%dm%02ds", total/60, total%60)
+}

@@ -202,3 +202,32 @@ tts:
       voiceId: v1
       model: eleven_turbo_v2_5
 `
+
+// The schema and the struct are maintained by hand and could disagree; the
+// fixture is where they are made to meet. A window read as 0 would silence
+// CHK-26 without saying so.
+func TestParse_ReadsTheDurationTarget(t *testing.T) {
+	cfg := loadValid(t)
+	target := cfg.Video.TargetDuration
+	if !target.Declared() || target.MinSeconds != 120 || target.MaxSeconds != 180 {
+		t.Fatalf("targetDuration = %+v", target)
+	}
+	for _, tc := range []struct {
+		seconds float64
+		want    bool
+	}{{119, false}, {120, true}, {150, true}, {180, true}, {181, false}} {
+		if got := target.Covers(tc.seconds); got != tc.want {
+			t.Errorf("Covers(%v) = %v, want %v", tc.seconds, got, tc.want)
+		}
+	}
+}
+
+func TestTargetDuration_UndeclaredCoversEverything(t *testing.T) {
+	var target TargetDuration
+	if target.Declared() {
+		t.Fatal("an empty target reports itself declared")
+	}
+	if !target.Covers(0) || !target.Covers(99999) {
+		t.Fatal("an undeclared target rejected a length")
+	}
+}

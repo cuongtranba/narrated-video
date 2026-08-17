@@ -136,6 +136,19 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		wantFail []string
 	}{
 		{
+			// The window is deliberately far from the fixture's real length, so
+			// the failure is the target and not an off-by-one in the arithmetic.
+			name: "a cut that outgrew its brief",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "video.config.yaml")
+				writeFile(t, path, strings.Replace(read(t, path),
+					"  minSceneFrames: 30\n",
+					"  minSceneFrames: 30\n  targetDuration:\n    minSeconds: 600\n    maxSeconds: 900\n", 1))
+				return nil
+			},
+			wantFail: []string{"CHK-26"},
+		},
+		{
 			name: "the composition renamed without a sync",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "package.json")

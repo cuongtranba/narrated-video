@@ -8,6 +8,9 @@ video:
   transitionFrames: 14
   minSceneFrames: 60
   out: out
+  targetDuration:
+    minSeconds: 120
+    maxSeconds: 180
 
 locales:
   default: en
