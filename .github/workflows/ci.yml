@@ -26,37 +26,70 @@ jobs:
       - run: go vet ./...
       - run: go test -race ./...
 
-  # The binaries are committed so an install needs no build, which raises one
-  # question: are they still the ones this source produces?
-  #
-  # Byte-comparing a rebuild does not answer it. Two installations of the same
-  # Go version — Homebrew's and the one this runner downloads — emit binaries of
-  # identical size and differing bytes even under -trimpath -buildid=, so that
-  # check fails on every push from a laptop while proving nothing.
-  #
-  # Commit order answers it directly and deterministically: if the newest commit
-  # touching the source is newer than the newest commit touching the binaries,
-  # someone edited one and did not rebuild the other.
-  binaries-current:
+  # Ensures the committed binaries match the source they were built from.
+  # For non-fork PRs and pushes to main: builds and commits automatically using
+  # RELEASE_PLEASE_TOKEN (a user token) so the bot commit retriggers CI normally.
+  # For fork and Dependabot PRs where CI cannot push back: fails with a clear
+  # message so the contributor knows to run `make binaries` locally.
+  build-binaries:
     runs-on: ubuntu-latest
+    needs: [test]
+    permissions:
+      contents: write
     steps:
+      # Check out the actual branch head (not the detached merge commit that the
+      # default PR checkout produces) so we can push back to it when needed.
       - uses: actions/checkout@v7.0.1
         with:
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           fetch-depth: 0
+          ref: ${{ github.head_ref || github.ref_name }}
 
-      - name: Binaries are at least as new as the source they come from
+      - name: Check whether binaries need rebuilding
+        id: check
         run: |
           source_at=$(git log -1 --format=%ct -- cmd internal kit go.mod go.sum)
           binaries_at=$(git log -1 --format=%ct -- skills/narrated-video/bin)
+
+          source_at=${source_at:-0}
+          binaries_at=${binaries_at:-0}
 
           echo "newest source commit:   $(date -u -d @"$source_at" 2>/dev/null || date -u -r "$source_at")"
           echo "newest binary commit:   $(date -u -d @"$binaries_at" 2>/dev/null || date -u -r "$binaries_at")"
 
           if [ "$source_at" -gt "$binaries_at" ]; then
-            echo "::error::The source changed after the binaries were last built. Run 'make binaries' and commit the result."
-            git log --oneline -3 -- cmd internal kit go.mod go.sum
-            exit 1
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Fail when CI cannot push stale binaries back
+        if: |
+          steps.check.outputs.needed == 'true' &&
+          (github.event.pull_request.head.repo.fork == true ||
+           github.actor == 'dependabot[bot]')
+        run: |
+          echo "::error::Binaries are stale and CI cannot push to this branch (fork or Dependabot PR). Run 'make binaries', commit the result, and push."
+          git log --oneline -3 -- cmd internal kit go.mod go.sum
+          exit 1
+
+      - uses: actions/setup-go@v7.0.0
+        if: steps.check.outputs.needed == 'true'
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Rebuild binaries
+        if: steps.check.outputs.needed == 'true'
+        run: make binaries
+
+      - name: Commit and push rebuilt binaries
+        if: steps.check.outputs.needed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add skills/narrated-video/bin
+          git commit -m "build: rebuild the nv binary for each platform"
+          git push
 
   # Everything a user does on day one — run against the COMMITTED binary, not a
   # fresh build. That is the artifact people actually install, so it is the one
