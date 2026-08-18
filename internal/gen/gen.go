@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/project"
 )
 
@@ -39,12 +40,16 @@ func All(p *project.Project) ([]File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return []File{
+	files := []File{
 		{Path: p.GeneratedPath("timeline.ts"), Data: timelineTS(p)},
 		{Path: p.GeneratedPath("registry.ts"), Data: registryTS(p)},
 		{Path: p.GeneratedPath("theme.ts"), Data: themeTS(p)},
 		{Path: p.GeneratedPath("content.ts"), Data: content},
-	}, nil
+	}
+	if len(p.Config.Diagrams) > 0 {
+		files = append(files, File{Path: p.GeneratedPath("diagrams.ts"), Data: diagramsTS(p)})
+	}
+	return files, nil
 }
 
 func timelineTS(p *project.Project) []byte {
@@ -199,6 +204,96 @@ func contentTS(p *project.Project) ([]byte, error) {
 	}
 	b.WriteString("}\n")
 	return []byte(b.String()), nil
+}
+
+func diagramsTS(p *project.Project) []byte {
+	cfg := p.Config
+	var b strings.Builder
+	b.WriteString(header)
+	b.WriteString(`
+import type { Locale } from "./timeline"
+
+export interface DiagramNode {
+  readonly id: string
+  readonly x: number
+  readonly y: number
+  readonly width: number
+  readonly height: number
+  readonly label: string
+}
+
+export interface DiagramEdge {
+  readonly id: string
+  readonly source: string
+  readonly target: string
+}
+
+export interface DiagramData {
+  readonly nodes: readonly DiagramNode[]
+  readonly edges: readonly DiagramEdge[]
+}
+
+export const DIAGRAMS: Readonly<Record<Locale, Readonly<Record<string, DiagramData>>>> = {
+`)
+	for _, code := range cfg.LocaleCodes() {
+		fmt.Fprintf(&b, "  %s: {\n", tsKey(code))
+		copyMap := p.Content[code].Copy
+		diagramLabels, _ := copyMap["diagrams"].(map[string]any)
+		for _, name := range project.SortedKeys(cfg.Diagrams) {
+			d := cfg.Diagrams[name]
+			fmt.Fprintf(&b, "    %s: {\n", tsKey(name))
+			b.WriteString("      nodes: [\n")
+			nodes := make([]config.DiagramNode, len(d.Nodes))
+			copy(nodes, d.Nodes)
+			sort.Slice(nodes, func(i, j int) bool { return nodes[i].ID < nodes[j].ID })
+			for _, node := range nodes {
+				label := diagramLabel(diagramLabels, name, node.ID)
+				fmt.Fprintf(&b,
+					"        { id: %s, x: %s, y: %s, width: %s, height: %s, label: %s },\n",
+					quote(node.ID),
+					formatNumber(node.At[0]),
+					formatNumber(node.At[1]),
+					formatNumber(node.Size[0]),
+					formatNumber(node.Size[1]),
+					quote(label),
+				)
+			}
+			b.WriteString("      ],\n")
+			b.WriteString("      edges: [\n")
+			for _, edge := range d.Edges {
+				fmt.Fprintf(&b,
+					"        { id: %s, source: %s, target: %s },\n",
+					quote(edge.From+"-"+edge.To),
+					quote(edge.From),
+					quote(edge.To),
+				)
+			}
+			b.WriteString("      ],\n")
+			b.WriteString("    },\n")
+		}
+		b.WriteString("  },\n")
+	}
+	b.WriteString("}\n")
+	return []byte(b.String())
+}
+
+func diagramLabel(diagramLabels map[string]any, diagramName, nodeID string) string {
+	if diagramLabels == nil {
+		return ""
+	}
+	labels, _ := diagramLabels[diagramName].(map[string]any)
+	if labels == nil {
+		return ""
+	}
+	label, _ := labels[nodeID].(string)
+	return label
+}
+
+func formatNumber(f float64) string {
+	if f == float64(int64(f)) {
+		return fmt.Sprintf("%d", int64(f))
+	}
+	return fmt.Sprintf("%g", f)
 }
 
 // tsType walks a value and describes its shape. Keys are sorted so the output

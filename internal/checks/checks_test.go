@@ -503,6 +503,130 @@ const basePackageJSON = `{
 }
 `
 
+func buildPassingProjectWithDiagram(t *testing.T) string {
+	t.Helper()
+	root := t.TempDir()
+
+	writeFile(t, filepath.Join(root, "video.config.yaml"), baseConfigWithDiagram)
+	writeFile(t, filepath.Join(root, "content", "en.yaml"), baseEnglishWithDiagram)
+	writeFile(t, filepath.Join(root, "content", "vi.yaml"), baseVietnameseWithDiagram)
+	for _, scene := range []string{"Title", "Iteration", "Credits"} {
+		writeFile(t, filepath.Join(root, "src", "scenes", scene+".tsx"), sceneSource)
+	}
+	writeFile(t, filepath.Join(root, "package.json"), basePackageJSON)
+
+	p, err := project.Load(root)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	if err := voiceover.Run(context.Background(), p, voiceover.Options{}, io.Discard); err != nil {
+		t.Fatalf("voiceover: %v", err)
+	}
+	sync(t, root)
+	return root
+}
+
+func TestDiagramChecks_PassingProjectPassesAll(t *testing.T) {
+	root := buildPassingProjectWithDiagram(t)
+	p, err := project.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range Run(LoadKit(p, map[string]string{})) {
+		if !r.OK {
+			t.Errorf("%s (%s) failed on a project with a valid diagram:\n  remedy: %s\n  %v", r.ID, r.Title, r.Remedy, r.Findings)
+		}
+	}
+}
+
+func TestDiagramChecks_MutationFiresItsOwnCheck(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		mutate   func(t *testing.T, root string)
+		wantFail []string
+	}{
+		{
+			name: "edge references unknown node",
+			mutate: func(t *testing.T, root string) {
+				path := filepath.Join(root, "video.config.yaml")
+				writeFile(t, path, strings.Replace(read(t, path),
+					"      - from: config\n        to: sync\n",
+					"      - from: config\n        to: sync\n      - from: config\n        to: nonexistent\n", 1))
+				sync(t, root)
+			},
+			wantFail: []string{"CHK-29"},
+		},
+		{
+			name: "locale missing diagram node label",
+			mutate: func(t *testing.T, root string) {
+				path := filepath.Join(root, "content", "vi.yaml")
+				writeFile(t, path, strings.Replace(read(t, path),
+					`      config: "cấu hình"`,
+					`      config: ""`, 1))
+				sync(t, root)
+			},
+			wantFail: []string{"CHK-30"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := buildPassingProjectWithDiagram(t)
+			tc.mutate(t, root)
+			got := failingIDs(t, root, nil)
+			if !slices.Equal(got, tc.wantFail) {
+				t.Errorf("failing checks = %v, want %v", got, tc.wantFail)
+			}
+		})
+	}
+}
+
+const baseConfigWithDiagram = baseConfig + `diagrams:
+  pipeline:
+    nodes:
+      - id: config
+        at: [0, 0]
+        size: [320, 96]
+      - id: sync
+        at: [420, 0]
+        size: [320, 96]
+    edges:
+      - from: config
+        to: sync
+`
+
+const baseEnglishWithDiagram = `narration:
+  Title: "This is the loop, in ninety seconds."
+  Iteration: "Each pass reads the plan and delegates one chunk of the work."
+copy:
+  title:
+    heading: "The autonomous loop"
+    links: ["README", "ADR index"]
+  iteration:
+    caption: "the orchestrator delegates, the worker reports"
+    verdict: "GOAL MET"
+    steps: 4
+  diagrams:
+    pipeline:
+      config: "config label"
+      sync: "sync label"
+`
+
+const baseVietnameseWithDiagram = `narration:
+  Title: "Đây là vòng lặp, trong chín mươi giây."
+  Iteration: "Mỗi lượt đọc kế hoạch và giao một phần việc."
+copy:
+  title:
+    heading: "Vòng lặp tự động"
+    links: ["README", "ADR index"]
+  iteration:
+    caption: "orchestrator điều phối, worker báo cáo"
+    verdict: "GOAL MET"
+    steps: 4
+  diagrams:
+    pipeline:
+      config: "cấu hình"
+      sync: "đồng bộ"
+`
+
 const baseConfig = `kitVersion: 1
 video:
   id: Explainer

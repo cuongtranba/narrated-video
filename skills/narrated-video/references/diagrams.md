@@ -87,7 +87,91 @@ const graph: DiagramGraph = {
 the handle placement — and none of its default node theming (borders, font sizes,
 white backgrounds). `style.css` would override the kit's own node styles.
 
+## Authoring loop
+
+Diagram data splits across two files:
+
+- `video.config.yaml` owns **topology** — nodes (id, position, size) and edges. The Go
+  validator reads this without executing TypeScript.
+- `content/<locale>.yaml` owns **labels** — the human-readable text for each node, one
+  entry per locale. A translator opens this file.
+
+`nv sync` derives `src/generated/diagrams.ts` from both, producing one typed object per
+diagram per locale. The generated file is committed, like `timeline.ts`, and CHK-01 catches
+any drift between what is on disk and what a fresh derivation would produce.
+
+### Config block
+
+```yaml
+# video.config.yaml
+diagrams:
+  pipeline:
+    nodes:
+      - id: config
+        at: [0, 0]
+        size: [320, 96]
+      - id: sync
+        at: [420, 0]
+        size: [320, 96]
+    edges:
+      - from: config
+        to: sync
+```
+
+`at` is the node's `[x, y]` position in React Flow canvas coordinates. `size` is
+`[width, height]`. Both are required — `nv sync` uses them to populate the fields that
+CHK-32 requires on every node.
+
+### Content block
+
+```yaml
+# content/en.yaml
+copy:
+  diagrams:
+    pipeline:
+      config: "video.config.yaml"
+      sync: "nv sync"
+```
+
+Every locale must have an entry for every node id. CHK-30 catches a missing or empty
+label before the render.
+
+### Generated file
+
+After `nv sync`, `src/generated/diagrams.ts` contains:
+
+```typescript
+export const DIAGRAMS: Readonly<Record<Locale, Readonly<Record<string, DiagramData>>>> = {
+  en: {
+    pipeline: {
+      nodes: [
+        { id: "config", x: 0, y: 0, width: 320, height: 96, label: "video.config.yaml" },
+        { id: "sync",   x: 420, y: 0, width: 320, height: 96, label: "nv sync" },
+      ],
+      edges: [
+        { id: "config-sync", source: "config", target: "sync" },
+      ],
+    },
+  },
+  // … other locales …
+}
+```
+
+Import `DIAGRAMS` in a scene alongside `TIMELINE` to build the `DiagramGraph` for the
+current locale at the current frame.
+
 ## Checks
+
+**CHK-29** — every diagram edge references nodes declared in the same diagram.
+
+Reads `video.config.yaml` and checks each edge's `from` and `to` against the node ids in
+the same diagram. A typo'd endpoint renders an edge to nowhere while the process exits 0.
+
+**CHK-30** — every diagram node has a label in every locale.
+
+Reads `video.config.yaml` and every `content/<locale>.yaml`. Fails when a node has no
+label, or an empty label, in any locale. Catches localization gaps before the render
+produces a frame with a bare key or an empty box.
 
 **CHK-32** — every diagram node declares `width` and `height`.
 

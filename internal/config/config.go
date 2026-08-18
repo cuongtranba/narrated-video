@@ -21,16 +21,33 @@ import (
 const FileName = "video.config.yaml"
 
 type Config struct {
-	KitVersion      int               `yaml:"kitVersion"`
-	Video           Video             `yaml:"video"`
-	Locales         Locales           `yaml:"locales"`
-	Fonts           map[string]Font   `yaml:"fonts"`
-	Theme           map[string]string `yaml:"theme"`
-	Defaults        Defaults          `yaml:"defaults"`
-	Scenes          []Scene           `yaml:"scenes"`
-	TTS             TTS               `yaml:"tts"`
-	Glossary        []string          `yaml:"glossary"`
-	PrintedLiterals []string          `yaml:"printedLiterals"`
+	KitVersion      int                `yaml:"kitVersion"`
+	Video           Video              `yaml:"video"`
+	Locales         Locales            `yaml:"locales"`
+	Fonts           map[string]Font    `yaml:"fonts"`
+	Theme           map[string]string  `yaml:"theme"`
+	Defaults        Defaults           `yaml:"defaults"`
+	Scenes          []Scene            `yaml:"scenes"`
+	TTS             TTS                `yaml:"tts"`
+	Glossary        []string           `yaml:"glossary"`
+	PrintedLiterals []string           `yaml:"printedLiterals"`
+	Diagrams        map[string]Diagram `yaml:"diagrams"`
+}
+
+type Diagram struct {
+	Nodes []DiagramNode `yaml:"nodes"`
+	Edges []DiagramEdge `yaml:"edges"`
+}
+
+type DiagramNode struct {
+	ID   string     `yaml:"id"`
+	At   [2]float64 `yaml:"at"`
+	Size [2]float64 `yaml:"size"`
+}
+
+type DiagramEdge struct {
+	From string `yaml:"from"`
+	To   string `yaml:"to"`
 }
 
 type Video struct {

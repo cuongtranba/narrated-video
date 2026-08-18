@@ -77,7 +77,7 @@ func timelineIsBundlerFree(kit *Kit) Result {
 
 	for _, path := range sortedByteKeys(kit.Generated) {
 		base := path[strings.LastIndex(path, "/")+1:]
-		if base != "timeline.ts" && base != "content.ts" {
+		if base != "timeline.ts" && base != "content.ts" && base != "diagrams.ts" {
 			continue
 		}
 		source := string(kit.Generated[path])

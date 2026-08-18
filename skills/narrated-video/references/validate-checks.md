@@ -1,4 +1,4 @@
-# The 31 checks
+# The 33 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -18,6 +18,7 @@ Remedies below are the exact strings the tool prints.
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
 - [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-34, CHK-36, CHK-37](#source-discipline)
+- [Diagrams: CHK-29, CHK-30](#diagrams)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
 
 ## Generation and config
@@ -400,11 +401,39 @@ of that and, critically, has no enforcement of the `useCurrentFrame()` rule — 
 `useFrame` call renders a different video every run while every frame still looks
 fine and the gate exits 0. Same reasoning as CHK-36.
 
+## Diagrams
+
+### CHK-29 — every diagram edge references nodes declared in the same diagram
+
+Reads `video.config.yaml`'s `diagrams` block and checks each edge's `from` and `to`
+against the node ids declared in the same diagram. Passes vacuously when no diagrams
+are declared.
+
+Remedy: `add the missing node to the diagram's nodes list, or fix the edge endpoint`
+
+A typo'd endpoint renders an edge from or to nowhere while the process exits 0. The
+edge converges on a point; no error is produced. This is the same category of failure
+as a missing locale key — a silent visual lie in the final video.
+
+### CHK-30 — every diagram node has a label in every locale
+
+Reads `video.config.yaml`'s `diagrams` block and `content/<locale>.yaml` for every
+declared locale. Fails when a node has no label, or an empty label, in any locale.
+Passes vacuously when no diagrams are declared.
+
+Remedy: `add the missing label to content/<locale>.yaml under copy.diagrams.<diagram>.<nodeId>`
+
+Diagram labels are translated content — they belong in the content files the way
+narration strings do. A node whose label is missing in a locale renders its key as
+visible text or nothing, in silence, while the render exits 0. This is the localization
+failure the kit already guards for narration, applied to the surface a translator is
+least likely to notice.
+
 ## Reserved ids
 
-Check ids are permanent labels, not positions. `CHK-28`, `CHK-29`, `CHK-30`, `CHK-31`,
+Check ids are permanent labels, not positions. `CHK-28`, `CHK-31`,
 `CHK-33`, and `CHK-35` are held for checks that are not written yet, which is why this
-file lists 31 checks whose highest id is 37. An id is never reused either — one in a CI
+file lists 33 checks whose highest id is 37. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded

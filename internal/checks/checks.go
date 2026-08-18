@@ -88,6 +88,8 @@ func All() []Check {
 		durationWithinTarget,
 		renderScriptsTargetComposition,
 		pkgDepsMatchSceneKinds,
+		diagramEdgesReferenceKnownNodes,
+		diagramNodeLabelsComplete,
 		diagramNodesDeclaredSize,
 		scenesUseDiagramWrapper,
 		scenesUseSpaceWrapper,

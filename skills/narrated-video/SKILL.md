@@ -19,8 +19,7 @@ nv status        # again
 ```
 
 Run it at the start of a turn and after every step. It derives each stage from
-the files on disk — the config, the content, the manifests, the 31 checks — so it
-is never a plan someone is keeping up to date; it is what the project is.
+the files on disk — the config, the content, the manifests, the 33 checks — so itis never a plan someone is keeping up to date; it is what the project is.
 
 Do not reconstruct the running order from memory or from this file. Prose
 describes the pipeline; `nv status` computes it, and only one of those two can be
@@ -76,8 +75,7 @@ nv voiceover     # provider `silence`: no API key, no network
 # then it regenerates src/generated/ automatically
 
 nv status        # ▸ render — gate green; next: bun install && bun run render
-nv validate      # exit 0 — "31 checks passed"
-bun install && bun run studio
+nv validate      # exit 0 — "33 checks passed"bun install && bun run studio
 ```
 
 **Do not assemble the scaffold yourself.** Do not run `create-video`. Do not
@@ -165,8 +163,7 @@ a fresh clone, and the render wears an `UNVOICED` badge until real audio exists.
 
 ## The gate
 
-`nv validate` runs all 31 checks — no fail-fast — and exits 1 if any fail. Each
-failure prints where it is and one imperative remedy line. `--json` for CI.
+`nv validate` runs all 33 checks — no fail-fast — and exits 1 if any fail. Eachfailure prints where it is and one imperative remedy line. `--json` for CI.
 
 It reads no pixels, asks no model to judge prose, and touches no network or API
 key. That is the only property the exit code has, and it is what lets the gate run
@@ -179,8 +176,7 @@ something shipped wrong; `references/validate-checks.md` says what, per check.
 
 ## Done means
 
-1. `nv validate` exits 0 — "31 checks passed".
-2. No `UNVOICED` badge in the render. The badge cannot be switched off by a flag,
+1. `nv validate` exits 0 — "33 checks passed".2. No `UNVOICED` badge in the render. The badge cannot be switched off by a flag,
    only by having measured audio for every narrated scene, because a silent draft
    that looks finished is how a wrong cut escapes.
 3. `bun run render` produces the file (`out/explainer.mp4` by default).

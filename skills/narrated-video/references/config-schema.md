@@ -8,7 +8,7 @@ and `nv init` copies it into the project as `video.schema.json` so an editor can
 complete the config against the same document the tool validates it with.
 
 Required top-level keys: `kitVersion`, `video`, `locales`, `fonts`, `defaults`,
-`scenes`, `tts`. Optional: `theme`, `glossary`, `printedLiterals`. Unknown keys are
+`scenes`, `tts`. Optional: `theme`, `glossary`, `printedLiterals`, `diagrams`. Unknown keys are
 rejected everywhere (`additionalProperties: false`), so a typo is a failing check
 rather than a setting that silently does nothing.
 
@@ -23,6 +23,7 @@ rather than a setting that silently does nothing.
 - [`scenes`](#scenes)
 - [`tts`](#tts)
 - [`glossary` and `printedLiterals`](#glossary-and-printedliterals)
+- [`diagrams`](#diagrams)
 - [Complete annotated example](#complete-annotated-example)
 
 ## `kitVersion`
@@ -183,6 +184,45 @@ trivially.
 - `printedLiterals` — strings the system itself prints (CHK-15). Translating one
   makes the video contradict the product. Also excluded from glossary matching, so
   a code literal cannot satisfy a term.
+
+## `diagrams`
+
+Optional. A map of named node/edge graphs. **Topology lives here; labels live in
+`content/<locale>.yaml`** under `copy.diagrams.<name>.<nodeId>`. `nv sync` derives
+`src/generated/diagrams.ts` from both.
+
+```yaml
+diagrams:
+  pipeline:
+    nodes:
+      - id: config
+        at: [0, 0]
+        size: [320, 96]
+      - id: sync
+        at: [420, 0]
+        size: [320, 96]
+    edges:
+      - from: config
+        to: sync
+```
+
+Each node:
+
+| field | type | description |
+| --- | --- | --- |
+| `id` | `^[A-Za-z][A-Za-z0-9_-]*$` | required. The join key for labels in content files. |
+| `at` | `[x, y]` | required. Position in React Flow canvas coordinates (pixels, zoom 1). |
+| `size` | `[width, height]` | required. Passed through to every generated node so React Flow never needs to measure. |
+
+Each edge:
+
+| field | type | description |
+| --- | --- | --- |
+| `from` | string | required. Must match a declared node id (CHK-29). |
+| `to` | string | required. Must match a declared node id (CHK-29). |
+
+See `references/diagrams.md` for the authoring loop and how to pass diagram data to
+`<Diagram>` in a scene.
 
 ## Complete annotated example
 
