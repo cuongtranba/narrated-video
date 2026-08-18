@@ -299,6 +299,34 @@ Only the **second** argument is constrained; the first is expected to be a liter
 fraction. A blanket ban on numeric literals is unimplementable — scenes carry five
 to fourteen legitimately each.
 
+### CHK-28 — scene modules carry no wall-clock or nondeterministic motion
+
+Reads every `src/scenes/<Id>.tsx` the config declares and fails when any line
+(outside a comment or string literal) calls one of: `useFrame`, `Date.now`,
+`new Date`, `performance.now`, `Math.random`, `setTimeout`, `setInterval`,
+`requestAnimationFrame`. Reports scene and line number.
+
+Remedy: `derive timing from useCurrentFrame() from remotion; for randomness, use random() from remotion (seeded, deterministic per frame)`
+
+Remotion captures frames concurrently, out of order, in separate browser tabs.
+Any call that depends on wall-clock time or a per-tab RNG makes two renders of
+the same frame disagree — and a spot-check of one frame looks fine, so the
+gate is the only thing that catches it.
+
+| Call | Effect | Deterministic replacement |
+| --- | --- | --- |
+| `useFrame` (react-three-fiber) | `requestAnimationFrame` loop, not frame-derived | `useCurrentFrame()` |
+| `Date.now()` / `new Date()` | depends on when the render ran | `useCurrentFrame()` |
+| `performance.now()` | wall clock | `useCurrentFrame()` |
+| `Math.random()` | fresh value per frame and per tab | `random()` from `remotion` |
+| `setTimeout` / `setInterval` | wall clock | `useCurrentFrame()` |
+| `requestAnimationFrame` | wall clock | `useCurrentFrame()` |
+
+`Math.random()` at module scope is not exempt — module scope executes once per
+tab, so particles seeded there differ between the tabs Remotion opens for parallel
+capture. `random()` from `remotion` is seeded by frame number, so it returns the
+same value for the same frame in every tab.
+
 ### CHK-23 — the generated timeline loads without a bundler
 
 Fails when `timeline.ts` or `content.ts` imports `remotion`, `react` or
@@ -431,9 +459,9 @@ least likely to notice.
 
 ## Reserved ids
 
-Check ids are permanent labels, not positions. `CHK-28`, `CHK-31`,
+Check ids are permanent labels, not positions. `CHK-31`,
 `CHK-33`, and `CHK-35` are held for checks that are not written yet, which is why this
-file lists 33 checks whose highest id is 37. An id is never reused either — one in a CI
+file lists 34 checks whose highest id is 37. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded

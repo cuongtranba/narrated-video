@@ -29,8 +29,8 @@ component at frame 240.
 A scene is **told** how long it lasts. It never looks its own length up, and it
 never carries a fallback.
 
-Two rules enforce this, and both exist because the alternative is two surfaces
-that can disagree while every frame still renders:
+Three rules enforce this, each catching a distinct failure mode where every frame
+still renders while the output is wrong:
 
 - **CHK-21** — a scene module may not import `generated/timeline`,
   `generated/registry` or `video.config`. The validator reads the config and
@@ -40,12 +40,24 @@ that can disagree while every frame still renders:
   `at(0.4, 1209)` pins a cue to one language's audio; the translation then drifts
   away from the sentence explaining it, silently, because every frame still
   renders. Write `at(0.4, durationInFrames)`.
+- **CHK-28** — a scene module may not call `useFrame`, `Date.now`, `new Date`,
+  `performance.now`, `Math.random`, `setTimeout`, `setInterval`, or
+  `requestAnimationFrame`. These produce output that depends on wall-clock time or
+  a per-tab RNG — so two renders of the same frame, in two of Remotion's parallel
+  browser tabs, will disagree. Use `useCurrentFrame()` for timing and `random()`
+  from `remotion` for seeded randomness.
 
 CHK-22 constrains the second argument only. A blanket ban on numeric literals in
 scene sources is unimplementable — scenes legitimately carry five to fourteen of
 them each (`maxWidth: 1400`, `gap: 34`, `rise={26}`) — so a literal hunt is a
 false-positive machine that misses the actual sin, which lives in argument
 position.
+
+CHK-28 flags identifiers in call position only, not substrings. `Math.random`
+inside a comment or string literal is not a finding; a variable named `randomize`
+is not a finding. Module-scope `Math.random()` is flagged — it runs once per tab,
+which is once per parallel capture, so the particles or jitter it seeds differ
+between tabs even though the call appears only once.
 
 ## Anatomy of a scene
 

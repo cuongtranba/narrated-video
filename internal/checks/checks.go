@@ -82,6 +82,7 @@ func All() []Check {
 		costCapDeclared,
 		sceneSourcesAreTimingFree,
 		fractionCuesOnly,
+		sceneSourcesLackWallClockMotion,
 		timelineIsBundlerFree,
 		registryParity,
 		minSceneDuration,
