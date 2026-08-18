@@ -14,7 +14,7 @@ big committed audio gets, and the errors that actually come up.
 
 ## The 29 scaffold steps this replaces
 
-`nv init` writes 28 files plus the schema in one command. Assembled by hand, in
+`nv init` writes 29 files plus the schema in one command. Assembled by hand, in
 the session this tool came from, that was roughly 29 tool calls:
 
 - `create-video`, then **undoing** its tailwind template
@@ -36,6 +36,11 @@ or a `scripts/` directory with `ajv` and `@remotion/media-parser` in it — stop
 `nv init --scene=Middle` both add a scene. If you are on an older build where the
 space form scaffolded a whole project into `./Middle` instead, delete that
 directory and use `--scene=Middle`.
+
+**`--kind` picks the template a scene starts from.** `text` (the default), `flow`
+or `space`; see `scene-registry.md`. It also adds that kind's npm packages to
+`package.json`, so run `bun install` when the command says it added any. An
+unknown kind is refused before anything is written.
 
 **`--` in remedy text is harmless.** Several remedies print
 `nv voiceover -- <locale>`. `nv voiceover en` works identically — bare `--` is
@@ -164,6 +169,7 @@ face is named for it.
 | `mp3: no valid MPEG audio frame found` | the written file is not MPEG audio | usually an API error body saved as `.mp3`; delete it and re-run |
 | `unknown locale "xx" — the project declares [en vi]` | typo in a `nv voiceover` argument | use a declared code |
 | `"…" is not a scene id — use PascalCase letters and digits` | `nv init --scene my-scene` | `--scene MyScene` |
+| `unknown scene kind "…" — valid kinds: text, flow, space` | a typo or an invented `--kind` | use one of the three; nothing was written |
 | `needs an mp3 encoder on PATH, found neither ffmpeg nor lame` | `say` provider without an encoder | `brew install ffmpeg` |
 | `only available on macOS (running linux)` | `say` provider off macOS | use `silence` or `elevenlabs` |
 | `fonts: … is woff1` / `is a font collection` | unsupported local font container | convert to woff2, ttf or a single-face otf |

@@ -150,14 +150,62 @@ Two deliberate limits:
   that started its reveals at 0 would look right on its own and land early
   everywhere else.
 
+## Scene kinds
+
+A kind is the template a scene starts from plus the npm packages that template
+cannot render without. There are three, and `text` is the default:
+
+| Kind | Template | Dependencies |
+| --- | --- | --- |
+| `text` | `src/scenes/_template.tsx` | none beyond the kit |
+| `flow` | `src/scenes/_template.flow.tsx` | `@xyflow/react@^12.0.0` |
+| `space` | `src/scenes/_template.space.tsx` | `three@^0.175.0`, `@react-three/fiber@^9.0.0`, `@remotion/three@^4.0.0` |
+
+The kind changes exactly two things: which template the module is copied from,
+and which packages `package.json` installs. Everything above — the `Scene` export,
+`SceneProps`, CHK-21, CHK-22, `Stage`, `Reveal`, `useCopy()` — holds identically
+for all three. A kind is a starting point, not a dialect.
+
+**The kind is never written down.** It is read back out of the module's imports,
+because a `kind:` field in the config would be a second answer the imports could
+contradict, and the one that lies is always the one nobody is looking at. CHK-34
+derives the packages the scenes actually import and fails when `package.json` does
+not install them; `nv sync` reconciles the same way. Both add and correct, and
+neither removes — a package you reached for yourself stays yours.
+
+### flow
+
+Node-and-edge diagrams: pipelines, state machines, architecture. Built on
+[React Flow](https://reactflow.dev) (`@xyflow/react`).
+
+Remotion renders off the frame number, not the wall clock, so nothing may run its
+own timer. React Flow's layout is declarative, which is exactly why it suits a
+deterministic renderer: cue node reveals as fractions of `durationInFrames`, like
+every other scene.
+
+### space
+
+3D: objects in a scene, camera moves, spatial explanations. Built on
+[Three.js](https://threejs.org) through `@react-three/fiber`, with
+`@remotion/three` supplying the `ThreeCanvas` that renders inside a Remotion
+composition instead of into a browser's animation loop.
+
+The frame rule applies harder here. Never drive a camera or a mesh from
+`requestAnimationFrame` or from a clock — every position is a function of
+`useCurrentFrame()`, or the preview and the render disagree and only one of them
+is the deliverable.
+
 ## Adding a scene
 
 ```bash
-nv init --scene Middle      # --scene=Middle works identically
+nv init --scene Middle                  # --scene=Middle works identically
+nv init --scene Pipeline --kind flow    # text | flow | space; text is the default
 ```
 
-That command writes `src/scenes/Middle.tsx` from `_template.tsx` and appends
-`- Middle` to `scenes:` in the config. Then:
+That command writes `src/scenes/Middle.tsx` from the kind's template, appends
+`- Middle` to `scenes:` in the config, and adds that kind's dependencies to
+`package.json` — run `bun install` afterwards if it printed any. An unknown
+`--kind` is refused before anything is written. Then:
 
 1. Add its narration line to every `content/<locale>.yaml` under `narration:`,
    keyed by the scene id, and any on-screen strings under `copy:`.

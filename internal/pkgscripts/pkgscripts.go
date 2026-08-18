@@ -207,26 +207,33 @@ func replaceScript(raw []byte, sp span, name, value string) ([]byte, bool) {
 	return out, true
 }
 
-// scriptsSpan locates the byte range of the scripts object's value.
 func scriptsSpan(raw []byte) (span, bool) {
+	sp, _, ok := objectSpan(raw, "scripts")
+	return sp, ok
+}
+
+// objectSpan locates the byte range of a top-level object's value, and where
+// its key starts. The key is searched for with its opening quote, so
+// `"devDependencies"` is not mistaken for `"dependencies"`.
+func objectSpan(raw []byte, key string) (span, int, bool) {
 	doc := string(raw)
-	at := strings.Index(doc, `"scripts"`)
+	at := strings.Index(doc, `"`+key+`"`)
 	if at < 0 {
-		return span{}, false
+		return span{}, 0, false
 	}
-	i := at + len(`"scripts"`)
+	i := at + len(key) + 2
 	for i < len(doc) && isSpace(doc[i]) {
 		i++
 	}
 	if i >= len(doc) || doc[i] != ':' {
-		return span{}, false
+		return span{}, 0, false
 	}
 	i++
 	for i < len(doc) && isSpace(doc[i]) {
 		i++
 	}
 	if i >= len(doc) || doc[i] != '{' {
-		return span{}, false
+		return span{}, 0, false
 	}
 
 	depth, inString, escaped := 0, false, false
@@ -245,11 +252,11 @@ func scriptsSpan(raw []byte) (span, bool) {
 		case c == '}':
 			depth--
 			if depth == 0 {
-				return span{i, j + 1}, true
+				return span{i, j + 1}, at, true
 			}
 		}
 	}
-	return span{}, false
+	return span{}, 0, false
 }
 
 // stringEnd returns the index just past the JSON string literal starting at i.

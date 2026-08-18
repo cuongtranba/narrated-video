@@ -1,4 +1,4 @@
-# The 27 checks
+# The 28 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -17,7 +17,7 @@ Remedies below are the exact strings the tool prints.
 - [Scene shape and timing: CHK-12, CHK-13, CHK-25, CHK-26](#scene-shape-and-timing)
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
-- [Source discipline: CHK-21 – CHK-24, CHK-27](#source-discipline)
+- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-34](#source-discipline)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
 
 ## Generation and config
@@ -335,6 +335,35 @@ under it. Only the id is claimed: flags, the output path, and any script whose
 first token after the subcommand is a flag are left alone, and a `package.json`
 that is absent or unreadable passes — it belongs to the JavaScript project, not
 to `nv`.
+
+### CHK-34 — package.json installs what the scene kinds in use require
+
+Reads every `src/scenes/<Id>.tsx` the config declares, works out each one's kind
+from the packages it imports, and takes the union of what those kinds need. Fails
+when `package.json` does not list one of them, or lists it at a different version.
+
+Remedy: `run: nv sync`
+
+A scene's kind lives in exactly one place — its imports — and the packages that
+back it live in another, `package.json`. Two surfaces, and when they disagree the
+failure lands at bundle time as an unresolved import, after the voiceover has been
+paid for. `nv init --scene <Id> --kind flow` writes both halves; this catches a
+`package.json` edited out from under them, and a scene whose kind changed by hand.
+
+Reconciliation adds and corrects; it never removes. A `package.json` holds
+packages `nv` knows nothing about, and deleting what it does not recognise would
+be a destructive answer to a question nobody asked. That is also what keeps this
+check and `nv sync` congruent: everything the check reports is what the remedy
+fixes, and nothing else moves. A `package.json` that is absent, unreadable, or has
+no `dependencies` object passes — it belongs to the JavaScript project, not to
+`nv`.
+
+## Reserved ids
+
+Check ids are permanent labels, not positions. `CHK-28` through `CHK-33` are held
+for checks that are not written yet, which is why this file lists 28 checks whose
+highest id is 34. An id is never reused either — one in a CI log or an old issue
+has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded
 

@@ -16,6 +16,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 	"github.com/cuongtranba/narrated-video/internal/schema"
 	"github.com/cuongtranba/narrated-video/kit"
 )
@@ -68,9 +70,18 @@ func Project(dir string, out io.Writer) error {
 	return nil
 }
 
-// AddScene writes the module and registers it, because doing only the first
-// half leaves a project that compiles and renders nothing.
-func AddScene(root, id string, out io.Writer) error {
+// AddScene writes the module, registers it, and installs what its kind needs.
+// The three happen together because any two without the third leave a project
+// that fails somewhere other than here: unregistered renders nothing, and
+// registered without its dependency fails to resolve an import at bundle time.
+func AddScene(root, id, kindName string, out io.Writer) error {
+	if kindName == "" {
+		kindName = scenekind.Text
+	}
+	kind, known := scenekind.Lookup(kindName)
+	if !known {
+		return fmt.Errorf("unknown scene kind %q — valid kinds: %s", kindName, strings.Join(scenekind.Names(), ", "))
+	}
 	if !isSceneID(id) {
 		return fmt.Errorf("%q is not a scene id — use PascalCase letters and digits", id)
 	}
@@ -80,7 +91,7 @@ func AddScene(root, id string, out io.Writer) error {
 		return fmt.Errorf("%s already exists", path)
 	}
 
-	template, err := kit.FS.ReadFile("src/scenes/_template.tsx")
+	template, err := kit.FS.ReadFile(kind.TemplatePath)
 	if err != nil {
 		return err
 	}
@@ -101,8 +112,32 @@ func AddScene(root, id string, out io.Writer) error {
 		return err
 	}
 
-	fmt.Fprintf(out, "wrote src/scenes/%s.tsx and added it to video.config.yaml\n\nNext:\n  add its narration line to content/<locale>.yaml\n  nv status\n", id)
+	// Only this kind's dependencies, not the whole project's: reconciliation
+	// adds and never removes, so scenes already in the project have already
+	// contributed theirs.
+	installed, err := pkgscripts.ReconcileDepsAt(root, kind.Dependencies)
+	if err != nil {
+		return err
+	}
+
+	fmt.Fprintf(out, "wrote src/scenes/%s.tsx from the %s template and added it to video.config.yaml\n", id, kind.Name)
+	if installed {
+		fmt.Fprintf(out, "added to package.json: %s\n", strings.Join(depNames(kind), ", "))
+	}
+	fmt.Fprintf(out, "\nNext:\n  add its narration line to content/<locale>.yaml\n")
+	if installed {
+		fmt.Fprintf(out, "  bun install\n")
+	}
+	fmt.Fprintf(out, "  read %s\n  nv status\n", kind.Reference)
 	return nil
+}
+
+func depNames(kind scenekind.Kind) []string {
+	names := make([]string, 0, len(kind.Dependencies))
+	for _, dep := range kind.Dependencies {
+		names = append(names, dep.Name+"@"+dep.Version)
+	}
+	return names
 }
 
 // appendScene edits the document as text rather than reserialising it. A YAML

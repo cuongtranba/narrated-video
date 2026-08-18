@@ -149,6 +149,17 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-26"},
 		},
 		{
+			// The scene now needs a package nothing installs. Every frame of
+			// every other scene still renders, and the bundle fails.
+			name: "a scene rewritten into another kind without a sync",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Iteration.tsx")
+				writeFile(t, path, `import { ReactFlow } from "@xyflow/react"`+"\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-34"},
+		},
+		{
 			name: "the composition renamed without a sync",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "package.json")
@@ -420,6 +431,9 @@ const basePackageJSON = `{
   "scripts": {
     "render": "remotion render Explainer out/explainer.mp4",
     "still": "remotion still Explainer out/explainer.png"
+  },
+  "dependencies": {
+    "remotion": "4.0.512"
   }
 }
 `

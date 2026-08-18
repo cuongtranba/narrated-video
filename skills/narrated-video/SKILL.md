@@ -6,7 +6,7 @@ description: Build and maintain narrated explainer videos in Remotion. Use for a
 # narrated-video
 
 `nv` is a prebuilt binary that scaffolds a Remotion project, derives every scene's
-length from measured audio, synthesizes narration, and gates the result with 27
+length from measured audio, synthesizes narration, and gates the result with 28
 checks. The project it writes contains no build tooling of its own — a broken
 `node_modules` can change what renders, but it cannot change what the gate says.
 
@@ -19,7 +19,7 @@ nv status        # again
 ```
 
 Run it at the start of a turn and after every step. It derives each stage from
-the files on disk — the config, the content, the manifests, the 27 checks — so it
+the files on disk — the config, the content, the manifests, the 28 checks — so it
 is never a plan someone is keeping up to date; it is what the project is.
 
 Do not reconstruct the running order from memory or from this file. Prose
@@ -32,7 +32,7 @@ wrong. `--json` carries the same data with `.next.command` spelled out.
 | --- | --- | --- |
 | Anything, at any point | — | `nv status` |
 | New video from nothing | this file, then `references/config-schema.md` | `nv init <dir>` |
-| Add a scene | `references/scene-registry.md` | `nv init --scene <Id>` |
+| Add a scene | `references/scene-registry.md` | `nv init --scene <Id> [--kind text\|flow\|space]` |
 | Add a language / translate | `references/localization.md`, `references/fonts.md` | `locales.list` + `content/<code>.yaml` |
 | Edit copy or narration | `references/localization.md` | `content/<locale>.yaml`, then `nv sync` |
 | Publish the script for a human | `references/localization.md` | `nv script <locale> > docs/…` |
@@ -55,16 +55,16 @@ at install time. `bin/nv` is a POSIX shim that picks `darwin-arm64`,
 `darwin-amd64`, `linux-amd64` or `linux-arm64`. Windows is not supported yet, and
 the shim says so rather than failing obscurely.
 
-Commands: `init [dir]` (`--scene <Id>`), `status` (`--json`), `sync`,
-`validate` (`--json`), `voiceover [locale…]` (`--force`), `script [locale]`,
-`version`. Run any of them from anywhere inside a project — the root is found by
-walking up, like `git`.
+Commands: `init [dir]` (`--scene <Id>`, `--kind text|flow|space`), `status`
+(`--json`), `sync`, `validate` (`--json`), `voiceover [locale…]` (`--force`),
+`script [locale]`, `version`. Run any of them from anywhere inside a project —
+the root is found by walking up, like `git`.
 
 ## New video
 
 ```bash
 nv init my-video && cd my-video
-# wrote 28 files to my-video
+# wrote 30 files to my-video
 
 nv status        # ▸ voiceover — 0/2 scenes measured; next: nv voiceover
 nv voiceover     # provider `silence`: no API key, no network
@@ -73,7 +73,7 @@ nv voiceover     # provider `silence`: no API key, no network
 # then it regenerates src/generated/ automatically
 
 nv status        # ▸ render — gate green; next: bun install && bun run render
-nv validate      # exit 0 — "27 checks passed"
+nv validate      # exit 0 — "28 checks passed"
 bun install && bun run studio
 ```
 
@@ -85,7 +85,8 @@ it by hand is what cost the project this tool came from roughly 29 tool calls of
 pure plumbing, most of it spent undoing a template's defaults.
 
 What `nv init` gives you: `video.config.yaml`, `video.schema.json`,
-`content/en.yaml`, two example scenes (`Title`, `Outro`) plus `_template.tsx`,
+`content/en.yaml`, two example scenes (`Title`, `Outro`) plus the three scene-kind
+templates (`_template.tsx`, `_template.flow.tsx`, `_template.space.tsx`),
 the components, the generated files, `package.json` with `studio` / `render` /
 `still` / `typecheck` / `lint`, eslint, tsconfig, `.gitignore`, `.env.example`,
 and a project `README.md`.
@@ -161,7 +162,7 @@ a fresh clone, and the render wears an `UNVOICED` badge until real audio exists.
 
 ## The gate
 
-`nv validate` runs all 27 checks — no fail-fast — and exits 1 if any fail. Each
+`nv validate` runs all 28 checks — no fail-fast — and exits 1 if any fail. Each
 failure prints where it is and one imperative remedy line. `--json` for CI.
 
 It reads no pixels, asks no model to judge prose, and touches no network or API
@@ -175,7 +176,7 @@ something shipped wrong; `references/validate-checks.md` says what, per check.
 
 ## Done means
 
-1. `nv validate` exits 0 — "27 checks passed".
+1. `nv validate` exits 0 — "28 checks passed".
 2. No `UNVOICED` badge in the render. The badge cannot be switched off by a flag,
    only by having measured audio for every narrated scene, because a silent draft
    that looks finished is how a wrong cut escapes.
