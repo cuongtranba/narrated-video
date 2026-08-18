@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.7.0](https://github.com/cuongtranba/narrated-video/compare/v0.6.0...v0.7.0) (2026-08-18)
+
+
+### Features
+
+* **checks:** CHK-28 — scene modules carry no wall-clock or nondeterministic motion ([#24](https://github.com/cuongtranba/narrated-video/issues/24)) ([7bc3da3](https://github.com/cuongtranba/narrated-video/commit/7bc3da3a132e2e92583620518d95c1718376be80))
+* **checks:** CHK-31 & CHK-35 — assets must hold the frame; CI proves determinism ([#29](https://github.com/cuongtranba/narrated-video/issues/29)) ([359af44](https://github.com/cuongtranba/narrated-video/commit/359af4496e7156bdd85bc70970ee0f5e927e695d))
+* **checks:** CHK-33 — space scenes require GL renderer; nv sync manages flag ([#30](https://github.com/cuongtranba/narrated-video/issues/30)) ([44ba41b](https://github.com/cuongtranba/narrated-video/commit/44ba41b89f046fd821867519717462f9bfb2222e))
+* **diagram:** animated walk — Stagger nodes, Trace edges, derived order ([#27](https://github.com/cuongtranba/narrated-video/issues/27)) ([8b429a7](https://github.com/cuongtranba/narrated-video/commit/8b429a7ed558efa36f0470da864bdbd0146da334))
+
 ## [0.6.0](https://github.com/cuongtranba/narrated-video/compare/v0.5.0...v0.6.0) (2026-08-18)
 
 
