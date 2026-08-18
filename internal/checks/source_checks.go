@@ -5,6 +5,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 )
 
 // A scene learns its length from props. Reaching into the timeline gives it a
@@ -87,6 +90,45 @@ func timelineIsBundlerFree(kit *Kit) Result {
 		}
 	}
 	return fail(id, title, "regenerate with: nv sync", sortedFindings(findings))
+}
+
+// CHK-34. A scene's kind is visible only in what it imports, and the packages
+// that back it live in package.json — two surfaces, and the failure when they
+// disagree lands at bundle time as an unresolved import, after the voiceover has
+// been paid for. `nv sync` reconciles them; this catches a package.json edited
+// out from under it, and a scene whose kind changed by hand.
+//
+// A package.json nv cannot read is not a finding. It belongs to the JavaScript
+// project, and a check whose remedy would not work is one readers learn to skip.
+func pkgDepsMatchSceneKinds(kit *Kit) Result {
+	const id, title = "CHK-34", "package.json installs what the scene kinds in use require"
+
+	file, err := pkgscripts.Load(kit.Root)
+	if err != nil || file == nil {
+		return pass(id, title)
+	}
+	installed, readable := file.Deps()
+	if !readable {
+		return pass(id, title)
+	}
+
+	var findings []Finding
+	for _, dep := range scenekind.Required(kit.SceneSources) {
+		got, present := installed[dep.Name]
+		switch {
+		case !present:
+			findings = append(findings, Finding{
+				Where:  pkgscripts.FileName + " dependencies",
+				Detail: fmt.Sprintf("%s is missing; a scene in this project needs %s", dep.Name, dep.Version),
+			})
+		case got != dep.Version:
+			findings = append(findings, Finding{
+				Where:  pkgscripts.FileName + " dependencies",
+				Detail: fmt.Sprintf("%s is %q, but the scene kinds in use need %q", dep.Name, got, dep.Version),
+			})
+		}
+	}
+	return fail(id, title, "run: nv sync", sortedFindings(findings))
 }
 
 func importsPath(source, needle string) bool {

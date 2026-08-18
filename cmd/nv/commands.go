@@ -19,6 +19,7 @@ import (
 	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/project"
 	"github.com/cuongtranba/narrated-video/internal/scaffold"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 	"github.com/cuongtranba/narrated-video/internal/script"
 	"github.com/cuongtranba/narrated-video/internal/voiceover"
 )
@@ -35,7 +36,7 @@ func runInit(args []string) error {
 		if err != nil {
 			return err
 		}
-		return scaffold.AddScene(root, sceneID, os.Stdout)
+		return scaffold.AddScene(root, sceneID, flags["kind"], os.Stdout)
 	}
 
 	dir := "."
@@ -79,7 +80,23 @@ func syncAt(dir string) error {
 		}
 		fmt.Printf("  %s\n", relTo(root, f.Path))
 	}
-	return retargetRenderScripts(root, p.Config.CompositionID(p.Config.Locales.Default))
+	if err := retargetRenderScripts(root, p.Config.CompositionID(p.Config.Locales.Default)); err != nil {
+		return err
+	}
+	return reconcileSceneKindDeps(root, p)
+}
+
+// reconcileSceneKindDeps keeps package.json installing what the scenes actually
+// import. Sync owns it for the same reason it owns the render scripts: the set
+// is derived from the sources, and a hand-kept copy is one that eventually
+// disagrees — here, as an unresolved import at bundle time.
+func reconcileSceneKindDeps(root string, p *project.Project) error {
+	changed, err := pkgscripts.ReconcileDepsAt(root, scenekind.Required(p.SceneSources()))
+	if err != nil || !changed {
+		return err
+	}
+	fmt.Printf("  %s\n", pkgscripts.FileName)
+	return nil
 }
 
 // retargetRenderScripts keeps package.json's render and still scripts pointed at

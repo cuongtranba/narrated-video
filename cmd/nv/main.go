@@ -20,7 +20,7 @@ import (
 
 const usage = `nv — narrated explainer videos
 
-  nv init [dir]            scaffold a project (--scene <Id> adds one scene)
+  nv init [dir]            scaffold a project (--scene <Id> [--kind text|flow|space] adds one scene)
   nv status [--json]       where the project is, and the one command to run next
   nv sync                  regenerate src/generated/ from the config and the audio
   nv validate [--json]     run every check; exit 1 if any fails
@@ -80,7 +80,7 @@ func main() {
 // thing. Without this the space form silently reads "Title" as a positional
 // argument, and `nv init --scene Title` scaffolds a project into a directory
 // called Title instead of adding a scene.
-var valueFlags = map[string]bool{"scene": true}
+var valueFlags = map[string]bool{"scene": true, "kind": true}
 
 // splitArgs is a deliberately small argument reader. The commands take a
 // handful of flags plus a list of locales, and the standard library's flag

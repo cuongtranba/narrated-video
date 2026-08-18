@@ -153,6 +153,19 @@ func readManifest(path string) (*timing.Manifest, error) {
 	return &m, nil
 }
 
+// SceneSources reads every declared scene's module, keyed by scene id. A module
+// that is missing is absent rather than fatal — CHK-24 reports that on its own,
+// and the checks that read sources still have something to say about the rest.
+func (p *Project) SceneSources() map[string]string {
+	sources := map[string]string{}
+	for _, scene := range p.Config.Scenes {
+		if data, err := os.ReadFile(p.ScenePath(scene.ID)); err == nil {
+			sources[scene.ID] = string(data)
+		}
+	}
+	return sources
+}
+
 // NarratedScenes is the set a line is expected for. An unnarrated scene has no
 // audio, no hash and no cost, and every check that walks narration skips it.
 func (p *Project) NarratedScenes() []string {

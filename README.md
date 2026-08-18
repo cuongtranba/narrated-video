@@ -4,7 +4,7 @@ A skill that ships a prebuilt gate for narrated explainer videos.
 
 `nv` is a single static Go binary. It scaffolds a [Remotion](https://remotion.dev)
 project, derives every scene's length from **measured** audio, synthesizes the
-narration, and runs 27 checks whose exit code is the contract. The project it
+narration, and runs 28 checks whose exit code is the contract. The project it
 writes carries no build tooling of its own — no `scripts/`, no `ajv`, no YAML
 library — so a broken `node_modules` can change what renders but cannot change
 what the gate says.
@@ -22,10 +22,10 @@ time.
 ## Quickstart
 
 ```bash
-nv init my-video && cd my-video     # wrote 28 files
+nv init my-video && cd my-video     # wrote 30 files
 nv status                           # ▸ voiceover — next: nv voiceover
 nv voiceover                        # provider `silence`: no API key, no network
-nv validate                         # exit 0 — "27 checks passed"
+nv validate                         # exit 0 — "28 checks passed"
 bun install && bun run studio
 ```
 
@@ -67,10 +67,10 @@ regenerating:
   ...
 ```
 
-Commands: `init [dir]` (`--scene <Id>`), `status` (`--json`), `sync`,
-`validate` (`--json`), `voiceover [locale…]` (`--force`), `script [locale]`,
-`version`. Run any of them from anywhere inside a project — the root is found by
-walking up, like `git`.
+Commands: `init [dir]` (`--scene <Id>`, `--kind text|flow|space`), `status`
+(`--json`), `sync`, `validate` (`--json`), `voiceover [locale…]` (`--force`),
+`script [locale]`, `version`. Run any of them from anywhere inside a project —
+the root is found by walking up, like `git`.
 
 ## Why
 
@@ -122,8 +122,8 @@ from state the project already held and no command would say:
 video.config.yaml ──┐
                     ├──► nv sync ──► src/generated/timeline.ts   (data only)
 public/voiceover/  ─┘            ├──► src/generated/registry.ts  (component bindings)
-   <locale>/manifest.json        └──► package.json               (composition id)
-                    │
+   <locale>/manifest.json        └──► package.json               (composition id,
+                    │                                             scene-kind deps)
 content/*.yaml ─────┼──► nv script ──► the readable script, on stdout
                     │
                     ├──► nv validate ──► exit 0 | exit 1 + remedies
@@ -145,10 +145,11 @@ internal/gen/               the TypeScript codegen
 internal/tts/               provider interface + elevenlabs, silence, say
 internal/mp3/               MPEG frame-header duration measurement
 internal/fonts/             woff2/sfnt cmap reader, unicode-range parser, NFC
-internal/checks/            the 27 checks
+internal/checks/            the 28 checks
 internal/pipeline/          nv status — the checks projected onto the running order
 internal/script/            nv script — the readable script, rendered from content/
-internal/pkgscripts/        the composition id inside package.json's render scripts
+internal/pkgscripts/        package.json — the composition id and the scene-kind deps
+internal/scenekind/         text | flow | space: template, dependencies, inference
 internal/scaffold/          nv init
 internal/schema/            video.schema.json
 kit/                        //go:embed — the Remotion project template

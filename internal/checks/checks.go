@@ -87,6 +87,7 @@ func All() []Check {
 		minSceneDuration,
 		durationWithinTarget,
 		renderScriptsTargetComposition,
+		pkgDepsMatchSceneKinds,
 	}
 }
 
@@ -116,7 +117,7 @@ func LoadKit(p *project.Project, trackedFiles map[string]string) *Kit {
 	kit := &Kit{
 		Project:      p,
 		Generated:    map[string][]byte{},
-		SceneSources: map[string]string{},
+		SceneSources: p.SceneSources(),
 		TrackedFiles: trackedFiles,
 	}
 
@@ -136,11 +137,6 @@ func LoadKit(p *project.Project, trackedFiles map[string]string) *Kit {
 	for _, locale := range p.Config.LocaleCodes() {
 		path := p.ContentPath(locale)
 		kit.TrackedFiles[relTo(p.Root, path)] = readOrEmpty(path)
-	}
-	for _, scene := range p.Config.Scenes {
-		if data, err := os.ReadFile(p.ScenePath(scene.ID)); err == nil {
-			kit.SceneSources[scene.ID] = string(data)
-		}
 	}
 	return kit
 }

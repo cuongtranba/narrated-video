@@ -49,6 +49,11 @@ func TestSplitArgs(t *testing.T) {
 			args:      []string{"--scene", "--json"},
 			wantFlags: map[string]string{"scene": "true", "json": "true"},
 		},
+		{
+			name:      "the kind travels with the scene",
+			args:      []string{"--scene", "Pipeline", "--kind", "flow"},
+			wantFlags: map[string]string{"scene": "Pipeline", "kind": "flow"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			flags, rest := splitArgs(tc.args)
