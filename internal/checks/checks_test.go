@@ -438,6 +438,33 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			},
 			wantFail: []string{"CHK-20"},
 		},
+		{
+			name: "a scene calls delayRender without ever calling continueRender",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, "const h = delayRender()\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-35"},
+		},
+		{
+			name: "a scene loads a 3D asset via a bare path instead of staticFile",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, `const model = "./robot.glb"`+"\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-35"},
+		},
+		{
+			name: "a scene references a staticFile path that does not exist under public/",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, "const h = delayRender()\nconst url = staticFile(\"missing.glb\")\ncontinueRender(h)\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-31"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := buildPassingProject(t)
@@ -447,6 +474,106 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			slices.Sort(tc.wantFail)
 			if !slices.Equal(got, tc.wantFail) {
 				t.Errorf("failing checks = %v, want %v", got, tc.wantFail)
+			}
+		})
+	}
+}
+
+func TestSourceCheck_AssetLoading(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		source string
+		wantOK bool
+	}{
+		{
+			name:   "clean scene with no assets",
+			source: sceneSource,
+			wantOK: true,
+		},
+		{
+			name: "staticFile with matching delayRender and continueRender",
+			source: `import React from "react"
+const handle = delayRender()
+const url = staticFile("environment.hdr")
+continueRender(handle)
+export const Scene = () => null
+`,
+			wantOK: true,
+		},
+		{
+			name: "delayRender and continueRender on error path",
+			source: `import React from "react"
+const h = delayRender()
+useGLTF(staticFile("model.glb"), () => continueRender(h), () => continueRender(h))
+export const Scene = () => null
+`,
+			wantOK: true,
+		},
+		{
+			name: "asset extension in a comment is ignored",
+			source: `import React from "react"
+// load with "./model.glb" — do not do this
+export const Scene = () => null
+`,
+			wantOK: true,
+		},
+		{
+			name: "useDelayRender identifier does not fire the check",
+			source: `import React from "react"
+import { useDelayRender } from "../hooks"
+export const Scene = () => null
+`,
+			wantOK: true,
+		},
+		{
+			name: "delayRender without continueRender",
+			source: `import React from "react"
+const handle = delayRender()
+export const Scene = () => null
+`,
+			wantOK: false,
+		},
+		{
+			name: "external https URL used as asset",
+			source: `import React from "react"
+const url = "https://cdn.example.com/model.glb"
+export const Scene = () => null
+`,
+			wantOK: false,
+		},
+		{
+			name: "bare relative path to glb",
+			source: `import React from "react"
+const url = "./model.glb"
+export const Scene = () => null
+`,
+			wantOK: false,
+		},
+		{
+			name: "bare path to hdr without staticFile",
+			source: `import React from "react"
+const env = "environment.hdr"
+export const Scene = () => null
+`,
+			wantOK: false,
+		},
+		{
+			name: "import path containing .gltf is not flagged",
+			source: `import { useGLTF } from "@react-three/drei/helpers/gltf-utils"
+import React from "react"
+export const Scene = () => null
+`,
+			wantOK: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kit := &Kit{
+				Project:      &project.Project{},
+				SceneSources: map[string]string{"Scene": tc.source},
+			}
+			r := scenesHoldFrameOnAssetLoad(kit)
+			if r.OK != tc.wantOK {
+				t.Errorf("OK=%v, want %v; findings: %v", r.OK, tc.wantOK, r.Findings)
 			}
 		})
 	}

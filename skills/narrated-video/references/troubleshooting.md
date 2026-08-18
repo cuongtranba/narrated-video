@@ -132,6 +132,29 @@ identity trap section in `scene-registry.md`.
 `delayRender`/`continueRender`. The kit's `src/fonts.ts` does this; do not
 "simplify" it into a bare `void Promise.all(...)`.
 
+**The model (or texture, or HDR environment) is missing from some frames.** A 3D
+asset is being loaded without `delayRender`/`continueRender`. Remotion captures
+frames synchronously; any load that begins after capture produces a frame where the
+asset has not arrived yet, and how many frames are affected depends on disk cache and
+machine load — so the failure can pass locally and fail in CI, or the reverse. CHK-35
+catches this in source. Fix: load via `staticFile("asset.glb")` and gate the capture:
+
+```tsx
+const handle = delayRender()
+useGLTF(staticFile("model.glb"), () => continueRender(handle), () => continueRender(handle))
+```
+
+The error-path call to `continueRender` is required: if the load fails and the handle
+is never released, the render process hangs instead of failing fast.
+
+**The render hangs and never finishes.** A `delayRender()` handle was created but
+`continueRender()` is never called on the error path — the load failed silently and
+the process is waiting forever. CHK-35 flags a source that calls `delayRender` with
+no `continueRender` at all; a handle released only in the success callback is not
+caught by source analysis, but can be confirmed by watching for `Error: delayRender
+was called but continueRender` in the Remotion console. Fix: call `continueRender(handle)`
+in both success and error callbacks — see `references/3d.md`.
+
 **`Cannot find module '../generated/…'`** on a fresh clone — run `nv sync`. The
 generated files are committed, so this usually means they were gitignored by
 accident; the kit's `.gitignore` deliberately does *not* ignore them.

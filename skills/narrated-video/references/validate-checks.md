@@ -1,4 +1,4 @@
-# The 34 checks
+# The 36 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -18,6 +18,7 @@ Remedies below are the exact strings the tool prints.
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
 - [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-34, CHK-36, CHK-37](#source-discipline)
+- [Assets: CHK-31, CHK-35](#assets)
 - [Diagrams: CHK-29, CHK-30](#diagrams)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
 
@@ -429,6 +430,43 @@ of that and, critically, has no enforcement of the `useCurrentFrame()` rule — 
 `useFrame` call renders a different video every run while every frame still looks
 fine and the gate exits 0. Same reasoning as CHK-36.
 
+## Assets
+
+### CHK-31 — assets referenced via staticFile exist under public/
+
+Reads every `src/scenes/<Id>.tsx` the config declares and scans for `staticFile("path")`
+calls. For each referenced path it checks that `public/<path>` exists on disk.
+
+Remedy: `add the missing asset to public/ or correct the path passed to staticFile()`
+
+A `staticFile()` call that points at nothing renders a broken texture or a missing
+model. The failure is visual — the mesh is invisible or the background is wrong — and
+it reproduces only if the asset is absent, which is easy to miss on the machine where
+the file was once present. This check catches the failure before the render costs
+minutes finding it.
+
+### CHK-35 — scene modules load assets via staticFile and hold the frame
+
+Reads every `src/scenes/<Id>.tsx` the config declares and fails when any of:
+
+- a string literal containing a 3D asset extension (`.glb`, `.gltf`, `.hdr`, `.ktx`,
+  `.ktx2`, `.exr`, `.basis`) appears outside a `staticFile()` call;
+- a string literal starting with `https://` is used as an asset reference;
+- `delayRender(` appears in call position but `continueRender(` does not.
+
+Passes vacuously when the scene source contains none of these patterns. Import lines
+and `//` comment lines are excluded from the scan.
+
+Remedy: `load assets with staticFile(path) and wrap in delayRender/continueRender — missing handles let frames render before assets arrive`
+
+Remotion's frame capture is synchronous. A 3D scene that starts loading a `.glb` after
+the frame is captured renders with the model absent — and how many frames are affected
+depends on disk cache and machine load, so it can pass locally and fail in CI or the
+reverse. `delayRender()` tells Remotion to wait; `continueRender()` releases the hold.
+Releasing on the error path too is required: a load that fails and never calls
+`continueRender` hangs the render process instead of failing it fast. See
+`references/3d.md` for the full pattern.
+
 ## Diagrams
 
 ### CHK-29 — every diagram edge references nodes declared in the same diagram
@@ -459,9 +497,8 @@ least likely to notice.
 
 ## Reserved ids
 
-Check ids are permanent labels, not positions. `CHK-31`,
-`CHK-33`, and `CHK-35` are held for checks that are not written yet, which is why this
-file lists 34 checks whose highest id is 37. An id is never reused either — one in a CI
+Check ids are permanent labels, not positions. `CHK-33` is held for checks that are not written yet, which is why this
+file lists 36 checks whose highest id is 37. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded
