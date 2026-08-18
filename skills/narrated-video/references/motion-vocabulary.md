@@ -54,6 +54,12 @@ normalised to 1 internally. The component fills its containing block absolutely
 Not for: raster images or complex clip animations. Not for paths that must also
 fill — `Trace` is stroke-only.
 
+On a diagram edge, `d` comes from React Flow's `getBezierPath` (`sourceX`,
+`sourceY`, `sourcePosition`, `targetX`, `targetY`, `targetPosition` — all supplied
+in a custom edge's `EdgeProps`), and `at`/`until` come from the diagram's walk
+schedule rather than a hand-picked cue. `<Diagram reveal={{ at, through }}>` wires
+this up itself; see `references/diagrams.md`.
+
 ## Focus
 
 A portion of the frame zooms in, directing the viewer's eye to a region.

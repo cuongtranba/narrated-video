@@ -157,3 +157,6 @@ independently leaves one-frame gaps that flicker at the seams.
 
 `nv voiceover` always regenerates afterwards. Leaving that to the operator is how
 a project ends up with scenes timed to audio it no longer has.
+
+Diagram `reveal.at` is a fraction passed to `at()`, identical to text cues — CHK-22
+enforces this.

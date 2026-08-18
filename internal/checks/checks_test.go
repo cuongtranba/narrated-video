@@ -387,6 +387,15 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-22"},
 		},
 		{
+			name: "a diagram walk revealed on a literal frame count instead of a fraction",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, badDiagramRevealScene)
+				return nil
+			},
+			wantFail: []string{"CHK-22"},
+		},
+		{
 			name: "a scene reaches for the timeline",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "src", "scenes", "Title.tsx")
@@ -728,5 +737,37 @@ export const Scene: SceneComponent = ({ durationInFrames, leadFrames }) => {
   const frame = useCurrentFrame()
   const revealed = frame > at(0.4, durationInFrames)
   return <div style={{ opacity: frame < leadFrames ? 0 : 1 }}>{revealed ? "shown" : null}</div>
+}
+`
+
+const badDiagramRevealScene = `import React from "react"
+import { useCurrentFrame } from "remotion"
+
+import { Diagram, type DiagramGraph } from "../components/diagram"
+import type { SceneComponent } from "./types"
+import { at } from "../timing"
+
+const graph: DiagramGraph = {
+  nodes: [
+    { id: "input", position: { x: 0, y: 0 }, width: 220, height: 72, data: { label: "Input" } },
+  ],
+  edges: [],
+}
+
+export const Scene: SceneComponent = ({ durationInFrames, leadFrames }) => {
+  const frame = useCurrentFrame()
+  const revealed = frame > at(0.15, durationInFrames)
+  return (
+    <div style={{ opacity: frame < leadFrames ? 0 : 1 }}>
+      {revealed ? (
+        <Diagram
+          name="Pipeline"
+          graph={graph}
+          viewport={{ x: 0, y: 0, zoom: 1 }}
+          reveal={{ at: at(0.15, 900), through: durationInFrames }}
+        />
+      ) : null}
+    </div>
+  )
 }
 `
