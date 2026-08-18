@@ -39,9 +39,10 @@ export const TIMELINE: Readonly<Record<Locale, LocaleTimeline>> = {
     transitionFrames: 14,
     scenes: [
       { id: "Title", leadFrames: 14, narrationFrames: 67, tailFrames: 24, durationInFrames: 105, source: "estimated", hasAudio: false },
+      { id: "Architecture", leadFrames: 14, narrationFrames: 162, tailFrames: 24, durationInFrames: 200, source: "estimated", hasAudio: false },
       { id: "Outro", leadFrames: 14, narrationFrames: 45, tailFrames: 24, durationInFrames: 83, source: "estimated", hasAudio: false },
     ],
-    totalFrames: 174,
+    totalFrames: 360,
     complete: false,
   },
 }

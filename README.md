@@ -121,10 +121,11 @@ from state the project already held and no command would say:
 ```
 video.config.yaml ──┐
                     ├──► nv sync ──► src/generated/timeline.ts   (data only)
-public/voiceover/  ─┘            ├──► src/generated/registry.ts  (component bindings)
-   <locale>/manifest.json        └──► package.json               (composition id,
-                    │                                             scene-kind deps)
-content/*.yaml ─────┼──► nv script ──► the readable script, on stdout
+public/voiceover/  ─┤            ├──► src/generated/registry.ts  (component bindings)
+   <locale>/manifest.json        ├──► src/generated/diagrams.ts  (diagram graphs, one per locale)
+                    │            └──► package.json               (composition id,
+content/*.yaml ─────┤                                            scene-kind deps)
+                    ├──► nv script ──► the readable script, on stdout
                     │
                     ├──► nv validate ──► exit 0 | exit 1 + remedies
                     └──► nv status ────► the stage you are on, and the next command

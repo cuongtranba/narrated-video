@@ -71,6 +71,7 @@ defaults:
 # frame table grows back after the derivation removed it.
 scenes:
   - Title
+  - Architecture
   - Outro
 
 tts:

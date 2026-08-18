@@ -1,6 +1,7 @@
 package scenekind
 
 import (
+	"io/fs"
 	"regexp"
 	"strings"
 	"testing"
@@ -153,6 +154,32 @@ func TestRequired_UnionsTheKindsInUse(t *testing.T) {
 	if got := Required(map[string]string{"Intro": "export const Scene = () => null"}); len(got) != 0 {
 		t.Fatalf("a project of text scenes requires %v, want nothing", got)
 	}
+}
+
+// The kit's shipped reference cut must include at least one scene that uses the
+// Diagram component. Templates are excluded — a template that demonstrates what
+// to fill in is not the same as an example that demonstrates the vocabulary.
+func TestKit_ReferenceScenesDemonstrateFlowKind(t *testing.T) {
+	entries, err := kit.FS.ReadDir("src/scenes")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.Type()&fs.ModeDir != 0 {
+			continue
+		}
+		if strings.HasPrefix(entry.Name(), "_") || !strings.HasSuffix(entry.Name(), ".tsx") {
+			continue
+		}
+		data, err := kit.FS.ReadFile("src/scenes/" + entry.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(data), `from "../components/diagram"`) {
+			return
+		}
+	}
+	t.Error(`kit reference cut ships no scene using the Diagram component; add a flow scene to kit/src/scenes/`)
 }
 
 func templateSource(t *testing.T, kind Kind) string {

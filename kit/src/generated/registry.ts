@@ -2,12 +2,14 @@
 
 import type { SceneComponent } from "../scenes/types"
 import { Scene as Title } from "../scenes/Title"
+import { Scene as Architecture } from "../scenes/Architecture"
 import { Scene as Outro } from "../scenes/Outro"
 
-export const SCENE_ORDER = ["Title", "Outro"] as const
+export const SCENE_ORDER = ["Title", "Architecture", "Outro"] as const
 export type SceneId = (typeof SCENE_ORDER)[number]
 
 export const SCENE_COMPONENTS: Readonly<Record<SceneId, SceneComponent>> = {
   Title,
+  Architecture,
   Outro,
 }

@@ -16,6 +16,7 @@ export interface Copy {
 
 export const NARRATION: Readonly<Record<Locale, Readonly<Partial<Record<SceneId, string>>>>> = {
   en: {
+    Architecture: "Config and content flow into nv sync, which derives the generated files Remotion reads.",
     Outro: "That is the whole cycle.",
     Title: "This is the loop, in ninety seconds.",
   },
