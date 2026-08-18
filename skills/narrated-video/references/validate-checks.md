@@ -1,4 +1,4 @@
-# The 30 checks
+# The 31 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -17,7 +17,7 @@ Remedies below are the exact strings the tool prints.
 - [Scene shape and timing: CHK-12, CHK-13, CHK-25, CHK-26](#scene-shape-and-timing)
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
-- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-34, CHK-36](#source-discipline)
+- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-34, CHK-36, CHK-37](#source-discipline)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
 
 ## Generation and config
@@ -386,11 +386,25 @@ can re-enable `fitView` or leave `nodesDraggable` on — and the frame will rend
 differently between two headless processes, silently. This is the same reasoning as
 CHK-21: the escape hatch is where the invariants get lost.
 
+### CHK-37 — scene modules import Three.js only through the Space wrapper
+
+Reads every `src/scenes/<Id>.tsx` the config declares and fails when any imports
+directly from `@react-three/fiber`, `three`, or `@remotion/three`.
+
+Remedy: `use <Space> from kit components instead — direct three/r3f imports bypass the wrapper's determinism guards`
+
+The `<Space>` component is where the `ThreeCanvas` configuration lives: width and
+height from `useVideoConfig()`, transparent background, and palette-matched default
+lighting. A scene that imports Three.js or react-three-fiber directly bypasses all
+of that and, critically, has no enforcement of the `useCurrentFrame()` rule — a
+`useFrame` call renders a different video every run while every frame still looks
+fine and the gate exits 0. Same reasoning as CHK-36.
+
 ## Reserved ids
 
 Check ids are permanent labels, not positions. `CHK-28`, `CHK-29`, `CHK-30`, `CHK-31`,
 `CHK-33`, and `CHK-35` are held for checks that are not written yet, which is why this
-file lists 30 checks whose highest id is 36. An id is never reused either — one in a CI
+file lists 31 checks whose highest id is 37. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded

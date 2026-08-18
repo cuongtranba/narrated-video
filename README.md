@@ -4,7 +4,7 @@ A skill that ships a prebuilt gate for narrated explainer videos.
 
 `nv` is a single static Go binary. It scaffolds a [Remotion](https://remotion.dev)
 project, derives every scene's length from **measured** audio, synthesizes the
-narration, and runs 30 checks whose exit code is the contract. The project it
+narration, and runs 31 checks whose exit code is the contract. The project it
 writes carries no build tooling of its own — no `scripts/`, no `ajv`, no YAML
 library — so a broken `node_modules` can change what renders but cannot change
 what the gate says.
@@ -25,7 +25,7 @@ time.
 nv init my-video && cd my-video     # wrote 30 files
 nv status                           # ▸ voiceover — next: nv voiceover
 nv voiceover                        # provider `silence`: no API key, no network
-nv validate                         # exit 0 — "30 checks passed"
+nv validate                         # exit 0 — "31 checks passed"
 bun install && bun run studio
 ```
 
@@ -145,7 +145,7 @@ internal/gen/               the TypeScript codegen
 internal/tts/               provider interface + elevenlabs, silence, say
 internal/mp3/               MPEG frame-header duration measurement
 internal/fonts/             woff2/sfnt cmap reader, unicode-range parser, NFC
-internal/checks/            the 30 checks
+internal/checks/            the 31 checks
 internal/pipeline/          nv status — the checks projected onto the running order
 internal/script/            nv script — the readable script, rendered from content/
 internal/pkgscripts/        package.json — the composition id and the scene-kind deps

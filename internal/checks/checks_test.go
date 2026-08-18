@@ -182,6 +182,40 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-36"},
 		},
 		{
+			// The scene needs packages nothing installs, and it bypasses the
+			// Space wrapper, so both CHK-34 and CHK-37 fire.
+			name: "a scene imports three directly without packages installed",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Iteration.tsx")
+				writeFile(t, path, `import { Mesh } from "three"`+"\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-34", "CHK-37"},
+		},
+		{
+			name: "a scene imports @react-three/fiber directly instead of through the Space wrapper",
+			mutate: func(t *testing.T, root string) map[string]string {
+				writeFile(t, filepath.Join(root, "package.json"), `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4",
+    "still": "remotion still Explainer out/explainer.png"
+  },
+  "dependencies": {
+    "@react-three/fiber": "^9.0.0",
+    "@remotion/three": "^4.0.0",
+    "three": "^0.175.0",
+    "remotion": "4.0.512"
+  }
+}
+`)
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, `import { useFrame } from "@react-three/fiber"`+"\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-37"},
+		},
+		{
 			name: "a diagram node is missing its declared dimensions",
 			mutate: func(t *testing.T, root string) map[string]string {
 				writeFile(t, filepath.Join(root, "src", "generated", "diagrams.ts"),
