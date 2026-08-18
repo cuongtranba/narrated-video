@@ -31,6 +31,27 @@ key fails to compile rather than rendering an empty box.
 Every locale's file has the same shape as the default's. That is not a convention;
 it is CHK-11.
 
+## Diagram labels
+
+When a project declares `diagrams` in `video.config.yaml`, each node's visible text is
+translated content — it belongs in `content/<locale>.yaml` alongside narration and copy:
+
+```yaml
+copy:
+  diagrams:
+    pipeline:
+      config: "video.config.yaml"   # en
+      sync: "nv sync"
+```
+
+The node id is the join key. `nv sync` looks up each node's label by id, per locale,
+and writes it into `src/generated/diagrams.ts`. A missing or empty label is caught by
+CHK-30 before the render.
+
+The diagram topology (which nodes exist, where they sit, which edges connect them) lives
+in `video.config.yaml` — the translator never touches it. Only the text on each node
+travels to `content/<locale>.yaml`.
+
 ## Publishing the script
 
 The spoken lines live here and nowhere else. When someone needs a readable

@@ -3,7 +3,81 @@ package checks
 import (
 	"fmt"
 	"strings"
+
+	"github.com/cuongtranba/narrated-video/internal/project"
 )
+
+// CHK-29. A typo'd endpoint renders an edge from or to nowhere while the process
+// exits 0. The node never appears, the edge converges on a point, and no error
+// is produced — a silent visual lie in the final video.
+func diagramEdgesReferenceKnownNodes(kit *Kit) Result {
+	const id, title = "CHK-29", "every diagram edge references nodes declared in the same diagram"
+
+	var findings []Finding
+	for _, name := range project.SortedKeys(kit.Config.Diagrams) {
+		d := kit.Config.Diagrams[name]
+		known := make(map[string]bool, len(d.Nodes))
+		for _, node := range d.Nodes {
+			known[node.ID] = true
+		}
+		for _, edge := range d.Edges {
+			if !known[edge.From] {
+				findings = append(findings, Finding{
+					Where:  name,
+					Detail: fmt.Sprintf("edge from %q: node %q is not declared", edge.To, edge.From),
+				})
+			}
+			if !known[edge.To] {
+				findings = append(findings, Finding{
+					Where:  name,
+					Detail: fmt.Sprintf("edge from %q: node %q is not declared", edge.From, edge.To),
+				})
+			}
+		}
+	}
+	return fail(id, title, "add the missing node to the diagram's nodes list, or fix the edge endpoint", sortedFindings(findings))
+}
+
+// CHK-30. Diagram labels are translated content. A node that has copy in one
+// locale but not another renders its key as visible text or nothing, in silence,
+// while the render exits 0. This is the localization failure the kit already
+// guards for narration, applied to the surface a translator is least likely to
+// notice.
+func diagramNodeLabelsComplete(kit *Kit) Result {
+	const id, title = "CHK-30", "every diagram node has a label in every locale"
+
+	var findings []Finding
+	for _, name := range project.SortedKeys(kit.Config.Diagrams) {
+		d := kit.Config.Diagrams[name]
+		for _, locale := range kit.Config.Locales.List {
+			labels := diagramLabelsForLocale(kit.Content[locale.Code].Copy, name)
+			for _, node := range d.Nodes {
+				if labels[node.ID] == "" {
+					findings = append(findings, Finding{
+						Where:  fmt.Sprintf("%s/%s", locale.Code, name),
+						Detail: fmt.Sprintf("node %q has no label", node.ID),
+					})
+				}
+			}
+		}
+	}
+	return fail(id, title, "add the missing label to content/<locale>.yaml under copy.diagrams.<diagram>.<nodeId>", sortedFindings(findings))
+}
+
+func diagramLabelsForLocale(copy map[string]any, diagramName string) map[string]string {
+	result := map[string]string{}
+	diagrams, _ := copy["diagrams"].(map[string]any)
+	if diagrams == nil {
+		return result
+	}
+	labels, _ := diagrams[diagramName].(map[string]any)
+	for k, v := range labels {
+		if s, ok := v.(string); ok {
+			result[k] = s
+		}
+	}
+	return result
+}
 
 // CHK-32. React Flow measures node dimensions with a ResizeObserver after first
 // paint. A headless renderer never fires that observer, so any node without an

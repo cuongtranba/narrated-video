@@ -250,6 +250,43 @@
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
       "description": "Strings the system itself prints. Translating one makes the video contradict the product (CHK-15)."
+    },
+
+    "diagrams": {
+      "type": "object",
+      "description": "Named node/edge graphs. Topology lives here; labels live in content/<locale>.yaml. nv sync derives src/generated/diagrams.ts from both.",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["nodes", "edges"],
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "at", "size"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_-]*$" },
+                "at": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 },
+                "size": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2 }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["from", "to"],
+              "properties": {
+                "from": { "type": "string" },
+                "to": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
     }
   },
 

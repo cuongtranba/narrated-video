@@ -209,6 +209,124 @@ func TestDiff_DetectsStaleAndMissingFiles(t *testing.T) {
 	}
 }
 
+func TestDiagramsTS_EmitsNodesWithLabelsAndSize(t *testing.T) {
+	root := t.TempDir()
+	write(t, filepath.Join(root, "video.config.yaml"), projectConfigWithDiagram)
+	write(t, filepath.Join(root, "content", "en.yaml"), englishContentWithDiagram)
+	write(t, filepath.Join(root, "content", "vi.yaml"), vietnameseContentWithDiagram)
+
+	p, err := project.Load(root)
+	if err != nil {
+		t.Fatalf("load project: %v", err)
+	}
+	out := generated(t, p, "diagrams.ts")
+
+	for _, want := range []string{
+		"export const DIAGRAMS",
+		`en:`,
+		`vi:`,
+		`pipeline:`,
+		`id: "config"`,
+		`width: 320`,
+		`height: 96`,
+		`x: 0`,
+		`y: 0`,
+		`label: "video.config.yaml"`,
+		`label: "cấu hình video"`,
+		`id: "config-sync"`,
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("diagrams.ts missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestDiagramsTS_AbsentWhenNoDiagrams(t *testing.T) {
+	p := newProject(t)
+	files, err := All(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range files {
+		if filepath.Base(f.Path) == "diagrams.ts" {
+			t.Errorf("diagrams.ts should not be generated when no diagrams are declared, got:\n%s", string(f.Data))
+		}
+	}
+}
+
+const projectConfigWithDiagram = `kitVersion: 1
+video:
+  id: Explainer
+  width: 1920
+  height: 1080
+  fps: 30
+locales:
+  default: en
+  list:
+    - code: en
+      label: English
+      font: body
+      charsPerSecond: 16.17
+    - code: vi
+      label: Tiếng Việt
+      font: body
+      charsPerSecond: 15.55
+fonts:
+  body:
+    kind: google
+    family: Inter
+    importName: Inter
+    subsets: [latin]
+theme:
+  background: oklch(0.16 0.012 13)
+  foreground: oklch(0.96 0.005 13)
+defaults:
+  leadFrames: 14
+  tailFrames: 24
+scenes:
+  - Title
+tts:
+  provider: silence
+  costCapUsd: 1.0
+  voices:
+    en:
+      voiceId: v1
+      model: eleven_multilingual_v2
+    vi:
+      voiceId: v2
+      model: eleven_turbo_v2_5
+diagrams:
+  pipeline:
+    nodes:
+      - id: config
+        at: [0, 0]
+        size: [320, 96]
+      - id: sync
+        at: [420, 0]
+        size: [320, 96]
+    edges:
+      - from: config
+        to: sync
+`
+
+const englishContentWithDiagram = `narration:
+  Title: "hello"
+copy:
+  diagrams:
+    pipeline:
+      config: "video.config.yaml"
+      sync: "nv sync"
+`
+
+const vietnameseContentWithDiagram = `narration:
+  Title: "xin chào"
+copy:
+  diagrams:
+    pipeline:
+      config: "cấu hình video"
+      sync: "đồng bộ"
+`
+
 const projectConfig = `kitVersion: 1
 video:
   id: Explainer
