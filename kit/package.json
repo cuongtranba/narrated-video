@@ -12,15 +12,18 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@react-three/fiber": "^9.0.0",
     "@remotion/cli": "4.0.512",
     "@remotion/fonts": "4.0.512",
     "@remotion/google-fonts": "4.0.512",
     "@remotion/media": "4.0.512",
+    "@remotion/three": "^4.0.0",
     "@remotion/transitions": "4.0.512",
     "@xyflow/react": "^12.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "remotion": "4.0.512"
+    "remotion": "4.0.512",
+    "three": "^0.175.0"
   },
   "devDependencies": {
     "@remotion/eslint-config-flat": "4.0.512",

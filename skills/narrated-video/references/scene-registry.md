@@ -199,6 +199,33 @@ The frame rule applies harder here. Never drive a camera or a mesh from
 `useCurrentFrame()`, or the preview and the render disagree and only one of them
 is the deliverable.
 
+All Three.js access goes through `<Space>` from `kit/src/components/space.tsx`.
+The component owns `ThreeCanvas` sizing, the transparent background, and default
+lighting — scenes do not touch any of those. **CHK-37** fails when a scene
+imports `@react-three/fiber`, `three`, or `@remotion/three` directly.
+
+```tsx
+import { useCurrentFrame, interpolate } from "remotion"
+import { Space } from "../components/space"
+
+export const Scene: SceneComponent = ({ durationInFrames, leadFrames }) => {
+  const frame = useCurrentFrame()
+  const rotation = frame * 0.04
+  return (
+    <Stage name="My3D" heading="…">
+      <Space name="Globe" camera={{ position: [0, 0, 5], fov: 60 }}>
+        <mesh rotation={[0, rotation, 0]}>
+          <sphereGeometry args={[1.5, 64, 64]} />
+          <meshStandardMaterial color={THEME.accent} />
+        </mesh>
+      </Space>
+    </Stage>
+  )
+}
+```
+
+For camera moves, render cost, and a full import allowlist, see `references/3d.md`.
+
 ## Adding a scene
 
 ```bash

@@ -90,6 +90,7 @@ func All() []Check {
 		pkgDepsMatchSceneKinds,
 		diagramNodesDeclaredSize,
 		scenesUseDiagramWrapper,
+		scenesUseSpaceWrapper,
 	}
 }
 
