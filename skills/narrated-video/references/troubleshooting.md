@@ -151,6 +151,18 @@ after the voiceover had been paid for. `nv sync` now rewrites the id in
 from under it. Only the id is claimed — flags and the output path are yours, and
 a script whose first token after the subcommand is a flag is left alone entirely.
 
+**Two renders of the same project produce different output.** Remotion captures
+frames concurrently in separate browser tabs. If a scene uses wall-clock time or
+nondeterministic values, two tabs will disagree — and a single-frame spot-check
+looks fine. Run `nv validate` and look for **CHK-28**. Banned calls:
+
+| Call | Deterministic replacement |
+| --- | --- |
+| `useFrame` (react-three-fiber) | `useCurrentFrame()` from `remotion` |
+| `Date.now()` / `new Date()` / `performance.now()` | `useCurrentFrame()` |
+| `Math.random()` | `random()` from `remotion` (seeded by frame) |
+| `setTimeout` / `setInterval` / `requestAnimationFrame` | `useCurrentFrame()` |
+
 **Type errors in `src/fonts.ts` after adding a locale.** Intended.
 `bodyFamilyFor` is keyed by `Locale`, so a new language stops the build until a
 face is named for it.

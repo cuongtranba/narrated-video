@@ -131,6 +131,82 @@ func pkgDepsMatchSceneKinds(kit *Kit) Result {
 	return fail(id, title, "run: nv sync", sortedFindings(findings))
 }
 
+var wallClockPatterns = []struct {
+	re      *regexp.Regexp
+	call    string
+	replace string
+}{
+	{regexp.MustCompile(`\buseFrame\s*\(`), "useFrame", "useCurrentFrame()"},
+	{regexp.MustCompile(`\bDate\.now\s*\(`), "Date.now", "useCurrentFrame()"},
+	{regexp.MustCompile(`\bnew\s+Date\s*\(`), "new Date", "useCurrentFrame()"},
+	{regexp.MustCompile(`\bperformance\.now\s*\(`), "performance.now", "useCurrentFrame()"},
+	{regexp.MustCompile(`\bMath\.random\s*\(`), "Math.random", "random() from remotion"},
+	{regexp.MustCompile(`\bsetTimeout\s*\(`), "setTimeout", "useCurrentFrame()"},
+	{regexp.MustCompile(`\bsetInterval\s*\(`), "setInterval", "useCurrentFrame()"},
+	{regexp.MustCompile(`\brequestAnimationFrame\s*\(`), "requestAnimationFrame", "useCurrentFrame()"},
+}
+
+// CHK-28. Two renders of the same frame, in separate browser tabs, must be
+// identical. Any call that depends on wall clock time or a per-tab RNG makes
+// that impossible — and the video looks plausible in a spot-check, so the gate
+// is the only thing that catches it.
+func sceneSourcesLackWallClockMotion(kit *Kit) Result {
+	const id, title = "CHK-28", "scene modules carry no wall-clock or nondeterministic motion"
+
+	var findings []Finding
+	for _, sceneID := range sortedStringKeys(kit.SceneSources) {
+		for i, raw := range strings.Split(kit.SceneSources[sceneID], "\n") {
+			stripped := stripStringsAndComment(raw)
+			for _, p := range wallClockPatterns {
+				if p.re.MatchString(stripped) {
+					findings = append(findings, Finding{
+						Where:  fmt.Sprintf("%s:%d", sceneID, i+1),
+						Detail: fmt.Sprintf("calls %s — use %s instead", p.call, p.replace),
+					})
+				}
+			}
+		}
+	}
+	return fail(id, title,
+		"derive timing from useCurrentFrame() from remotion; for randomness, use random() from remotion (seeded, deterministic per frame)",
+		sortedFindings(findings))
+}
+
+// stripStringsAndComment removes string literal contents and the // comment
+// suffix from a single source line, so callers can match call-position
+// identifiers without triggering on tokens that appear inside quotes or after
+// a comment marker.
+func stripStringsAndComment(line string) string {
+	var out []byte
+	inString := false
+	stringChar := byte(0)
+	for i := 0; i < len(line); i++ {
+		c := line[i]
+		if inString {
+			if c == '\\' {
+				out = append(out, ' ', ' ')
+				i++
+			} else if c == stringChar {
+				out = append(out, c)
+				inString = false
+			} else {
+				out = append(out, ' ')
+			}
+		} else {
+			if c == '"' || c == '\'' || c == '`' {
+				inString = true
+				stringChar = c
+				out = append(out, c)
+			} else if c == '/' && i+1 < len(line) && line[i+1] == '/' {
+				break
+			} else {
+				out = append(out, c)
+			}
+		}
+	}
+	return string(out)
+}
+
 func importsPath(source, needle string) bool {
 	for _, line := range strings.Split(source, "\n") {
 		trimmed := strings.TrimSpace(line)

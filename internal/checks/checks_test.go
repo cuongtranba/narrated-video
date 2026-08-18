@@ -136,6 +136,17 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		wantFail []string
 	}{
 		{
+			name: "a scene calls Math.random",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, strings.Replace(read(t, path),
+					"const frame = useCurrentFrame()",
+					"const frame = useCurrentFrame(); const jitter = Math.random()", 1))
+				return nil
+			},
+			wantFail: []string{"CHK-28"},
+		},
+		{
 			// The window is deliberately far from the fixture's real length, so
 			// the failure is the target and not an off-by-one in the arithmetic.
 			name: "a cut that outgrew its brief",
@@ -488,6 +499,42 @@ func TestChecks_UnlistedModelIsRefused(t *testing.T) {
 
 	if got := failingIDs(t, root, nil); !slices.Contains(got, "CHK-04") {
 		t.Errorf("failing checks = %v, expected CHK-04 for an unlisted model", got)
+	}
+}
+
+func TestSourceCheck_WallClock(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		source   string
+		wantFail bool
+	}{
+		{"clean with useCurrentFrame", `const f = useCurrentFrame()`, false},
+		{"useFrame call", `useFrame()`, true},
+		{"Date.now call", `const t = Date.now()`, true},
+		{"new Date call", `const d = new Date()`, true},
+		{"performance.now call", `performance.now()`, true},
+		{"Math.random call", `Math.random()`, true},
+		{"setTimeout call", `setTimeout(fn, 100)`, true},
+		{"setInterval call", `setInterval(fn, 100)`, true},
+		{"requestAnimationFrame call", `requestAnimationFrame(cb)`, true},
+		{"useFrame in comment", `// useFrame()`, false},
+		{"Math.random in comment", `// Math.random()`, false},
+		{"Math.random in string", `const s = "Math.random()"`, false},
+		{"Date.now in string", `const s = 'Date.now()'`, false},
+		{"longer identifier randomize", `const randomize = () => {}`, false},
+		{"longer identifier setIntervalId", `const setIntervalId = 1`, false},
+		{"useCurrentFrame not banned", `useCurrentFrame()`, false},
+		{"useFramework not banned", `useFramework()`, false},
+		{"import path with random", `import { random } from "remotion"`, false},
+		{"module-scope Math.random", `const R = Math.random()`, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kit := &Kit{SceneSources: map[string]string{"TestScene": tc.source}}
+			r := sceneSourcesLackWallClockMotion(kit)
+			if r.OK == tc.wantFail {
+				t.Errorf("OK=%v, wantFail=%v for source: %s", r.OK, tc.wantFail, tc.source)
+			}
+		})
 	}
 }
 
