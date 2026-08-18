@@ -93,6 +93,10 @@ and fade on the shared ease), `Rule`, `Card`, `Mono`, `Pill`, and the constants
 (`src/generated/theme.ts`, generated from `theme:` in the config); the type scale
 and safe area are layout decisions the components own, not config.
 
+For scenes that need motion beyond a single entrance — staggered lists, a path
+drawing itself, a region zooming in, text becoming subject, or a climbing number —
+see `references/motion-vocabulary.md` and `src/components/motion.tsx`.
+
 ## The generated registry
 
 `nv sync` writes `src/generated/registry.ts`:

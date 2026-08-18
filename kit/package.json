@@ -8,7 +8,8 @@
     "render": "remotion render Explainer out/explainer.mp4",
     "still": "remotion still Explainer out/explainer.png",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "test": "bun test"
   },
   "dependencies": {
     "@remotion/cli": "4.0.512",
