@@ -133,3 +133,71 @@ jobs:
           bun install
           bunx tsc --noEmit
           bunx remotion compositions src/index.ts
+
+  # Proves that two renders of the same frame, in separate processes, produce
+  # identical bytes. Source checks (CHK-28, CHK-35) catch nondeterminism by
+  # reading code; this catches the cases they do not anticipate.
+  #
+  # Gated on kit/ path changes so a pure Go fix does not pay for a full render.
+  # Frame 15 is chosen because it is one frame past the 14-frame lead — the
+  # first frame where motion is actually happening — making it the cheapest
+  # frame that proves something about the animated state.
+  determinism:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 2
+
+      - name: Skip when kit/ is unchanged
+        id: changed
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^kit/'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: oven-sh/setup-bun@v2
+        if: steps.changed.outputs.run == 'true'
+
+      - name: Install Chrome for headless rendering
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y google-chrome-stable
+
+      - name: Scaffold, voiceover, validate
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          nv="$GITHUB_WORKSPACE/skills/narrated-video/bin/nv"
+          mkdir -p /tmp/det && cd /tmp/det
+          "$nv" init .
+          "$nv" voiceover
+          "$nv" validate
+          bun install
+
+      - name: Render frame 15 twice and compare hashes
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          cd /tmp/det
+          bunx remotion still Explainer out/still-a.png --frame 15
+          bunx remotion still Explainer out/still-b.png --frame 15
+
+          hash_a=$(sha256sum out/still-a.png | awk '{print $1}')
+          hash_b=$(sha256sum out/still-b.png | awk '{print $1}')
+
+          echo "render 1: $hash_a"
+          echo "render 2: $hash_b"
+
+          if [ "$hash_a" != "$hash_b" ]; then
+            echo "::error::frame 15 differs between two renders — the scene is nondeterministic"
+            exit 1
+          fi
+
+      - name: Upload both frames when renders differ
+        if: failure() && steps.changed.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nondeterministic-frames
+          path: /tmp/det/out/still-*.png

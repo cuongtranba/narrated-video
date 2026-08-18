@@ -94,6 +94,8 @@ func All() []Check {
 		diagramNodesDeclaredSize,
 		scenesUseDiagramWrapper,
 		scenesUseSpaceWrapper,
+		assetExistsInPublic,
+		scenesHoldFrameOnAssetLoad,
 	}
 }
 
