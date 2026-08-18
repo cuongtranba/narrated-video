@@ -88,6 +88,8 @@ func All() []Check {
 		durationWithinTarget,
 		renderScriptsTargetComposition,
 		pkgDepsMatchSceneKinds,
+		diagramNodesDeclaredSize,
+		scenesUseDiagramWrapper,
 	}
 }
 
@@ -121,7 +123,7 @@ func LoadKit(p *project.Project, trackedFiles map[string]string) *Kit {
 		TrackedFiles: trackedFiles,
 	}
 
-	for _, name := range []string{"timeline.ts", "registry.ts", "theme.ts", "content.ts"} {
+	for _, name := range []string{"timeline.ts", "registry.ts", "theme.ts", "content.ts", "diagrams.ts"} {
 		path := p.GeneratedPath(name)
 		if data, err := os.ReadFile(path); err == nil {
 			kit.Generated[path] = data
