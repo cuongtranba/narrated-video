@@ -17,6 +17,7 @@
     "@remotion/google-fonts": "4.0.512",
     "@remotion/media": "4.0.512",
     "@remotion/transitions": "4.0.512",
+    "@xyflow/react": "^12.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "remotion": "4.0.512"

@@ -194,9 +194,10 @@ func TestAddScene_RefusesBadNamesAndDuplicates(t *testing.T) {
 	}
 }
 
-// A kind is a promise about three files at once: the module comes from that
-// kind's template, the config gains the scene, and package.json gains whatever
-// the kind cannot render without.
+// A kind is a promise: the module comes from that kind's template, the config
+// gains the scene, and the project's package.json lists whatever the kind
+// cannot render without (pre-installed in the kit's own package.json for kinds
+// whose components ship in kit/src).
 func TestAddScene_ScaffoldsTheKindItWasAskedFor(t *testing.T) {
 	for _, kind := range scenekind.All() {
 		t.Run(kind.Name, func(t *testing.T) {
@@ -253,10 +254,13 @@ func TestAddScene_DefaultsToText(t *testing.T) {
 	}
 }
 
-// The kind decides one module and one dependency list. Everything else about
-// the project is the same decision it was before — a kind that quietly rewrote
-// a config or a component would make `--kind` a fork rather than a template.
-func TestAddScene_ChangesNothingBeyondItsModuleAndItsDependencies(t *testing.T) {
+// The kind decides the scene module. Everything else about the project is the
+// same decision it was before — a kind that quietly rewrote a config or a
+// component would make `--kind` a fork rather than a template.
+//
+// Dependencies ship in the kit's own package.json, so AddScene for a flow kind
+// need not change package.json: @xyflow/react is already declared there.
+func TestAddScene_ChangesNothingBeyondItsModule(t *testing.T) {
 	text, flow := scaffoldInto(t), scaffoldInto(t)
 
 	if err := AddScene(text, "Marathon", "text", io.Discard); err != nil {
@@ -268,7 +272,6 @@ func TestAddScene_ChangesNothingBeyondItsModuleAndItsDependencies(t *testing.T) 
 
 	expected := map[string]bool{
 		filepath.Join("src", "scenes", "Marathon.tsx"): true,
-		"package.json": true,
 	}
 	for name, body := range tree(t, text) {
 		other, present := tree(t, flow)[name]

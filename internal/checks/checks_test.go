@@ -150,14 +150,45 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		},
 		{
 			// The scene now needs a package nothing installs. Every frame of
-			// every other scene still renders, and the bundle fails.
+			// every other scene still renders, and the bundle fails. The scene
+			// also bypasses the Diagram wrapper, so both CHK-34 and CHK-36 fire.
 			name: "a scene rewritten into another kind without a sync",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "src", "scenes", "Iteration.tsx")
 				writeFile(t, path, `import { ReactFlow } from "@xyflow/react"`+"\n"+read(t, path))
 				return nil
 			},
-			wantFail: []string{"CHK-34"},
+			wantFail: []string{"CHK-34", "CHK-36"},
+		},
+		{
+			name: "a scene imports React Flow directly instead of through the Diagram wrapper",
+			mutate: func(t *testing.T, root string) map[string]string {
+				writeFile(t, filepath.Join(root, "package.json"), `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4",
+    "still": "remotion still Explainer out/explainer.png"
+  },
+  "dependencies": {
+    "@xyflow/react": "^12.0.0",
+    "remotion": "4.0.512"
+  }
+}
+`)
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, `import { ReactFlow } from "@xyflow/react"`+"\n"+read(t, path))
+				return nil
+			},
+			wantFail: []string{"CHK-36"},
+		},
+		{
+			name: "a diagram node is missing its declared dimensions",
+			mutate: func(t *testing.T, root string) map[string]string {
+				writeFile(t, filepath.Join(root, "src", "generated", "diagrams.ts"),
+					"export const DIAGRAMS = {\n  pipeline: {\n    nodes: [\n      { id: \"input\", position: { x: 0, y: 0 }, data: { label: \"Input\" } },\n    ],\n    edges: [],\n  },\n}\n")
+				return nil
+			},
+			wantFail: []string{"CHK-32"},
 		},
 		{
 			name: "the composition renamed without a sync",
