@@ -10,6 +10,7 @@
 
 narration:
   Title: "This is the loop, in ninety seconds."
+  Architecture: "Config and content flow into nv sync, which derives the generated files Remotion reads."
   Outro: "That is the whole cycle."
 
 copy:

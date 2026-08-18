@@ -39,7 +39,8 @@ wrong. `--json` carries the same data with `.next.command` spelled out.
 | The cut is the wrong length | `references/config-schema.md` | `video.targetDuration`, then `nv status` |
 | A check is failing | `references/validate-checks.md` | the remedy line the failure printed |
 | The scene is flat / reads as a slideshow | `references/motion-vocabulary.md` | `Stagger`, `Trace`, `Focus`, `Emphasis`, `Count` in `motion.tsx` |
-| Draw an architecture / add a 3D scene | `references/3d.md` | `nv init --scene <Id> --kind space`, never use `useFrame` |
+| Draw an architecture / pipeline diagram | `references/diagrams.md` | `nv init --scene <Id> --kind flow`, use `<Diagram>` from kit |
+| Add a 3D scene | `references/3d.md` | `nv init --scene <Id> --kind space`, never use `useFrame` |
 
 Also here: `references/timing-model.md` (why lengths are derived and how),
 `references/tts-providers.md` (providers, models, the model that is wrong in a
