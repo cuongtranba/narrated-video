@@ -1,11 +1,11 @@
 import { Diagram, type DiagramGraph } from "../components/diagram"
-import { Reveal, Rule } from "../components/primitives"
+import { Rule } from "../components/primitives"
 import { Stage } from "../components/stage"
 import { THEME } from "../generated/theme"
 import { at } from "../timing"
 import type { SceneComponent } from "./types"
 
-const CUE = { diagram: 0.2 }
+const CUE = { walk: 0.15 }
 
 const graph: DiagramGraph = {
   nodes: [
@@ -32,15 +32,14 @@ export const Scene: SceneComponent = ({ durationInFrames, leadFrames }) => (
     >
       <Rule at={leadFrames} width={520} color={THEME.accent} />
 
-      <Reveal name="Diagram" at={at(CUE.diagram, durationInFrames)}>
-        <div style={{ height: 620 }}>
-          <Diagram
-            name="Pipeline"
-            graph={graph}
-            viewport={{ x: 410, y: 274, zoom: 1 }}
-          />
-        </div>
-      </Reveal>
+      <div style={{ height: 620 }}>
+        <Diagram
+          name="Pipeline"
+          graph={graph}
+          viewport={{ x: 410, y: 274, zoom: 1 }}
+          reveal={{ at: at(CUE.walk, durationInFrames), through: durationInFrames }}
+        />
+      </div>
     </div>
   </Stage>
 )
