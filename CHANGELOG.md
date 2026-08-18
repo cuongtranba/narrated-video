@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.0](https://github.com/cuongtranba/narrated-video/compare/v0.5.0...v0.6.0) (2026-08-18)
+
+
+### Features
+
+* **diagram:** diagram data model — topology in config, labels in content, diagrams.ts derived by nv sync ([#22](https://github.com/cuongtranba/narrated-video/issues/22)) ([6f5bd22](https://github.com/cuongtranba/narrated-video/commit/6f5bd22e691ee8d4a9dd778ea40e80487b2b1053))
+* **epic:** kit flow scene, SKILL routing, README diagram derivation ([#25](https://github.com/cuongtranba/narrated-video/issues/25)) ([3840193](https://github.com/cuongtranba/narrated-video/commit/38401939ee2c758f067acfc2c5b484964aca8cff))
+
 ## [0.5.0](https://github.com/cuongtranba/narrated-video/compare/v0.4.0...v0.5.0) (2026-08-18)
 
 
