@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.5.0](https://github.com/cuongtranba/narrated-video/compare/v0.4.0...v0.5.0) (2026-08-18)
+
+
+### Features
+
+* **diagram:** static deterministic React Flow wrapper and diagram checks ([#21](https://github.com/cuongtranba/narrated-video/issues/21)) ([567cfc8](https://github.com/cuongtranba/narrated-video/commit/567cfc86f27bc3d85efd8f52bb1be9179176f51b))
+* **motion:** motion vocabulary — Stagger, Trace, Focus, Emphasis, Count ([#20](https://github.com/cuongtranba/narrated-video/issues/20)) ([44bf12d](https://github.com/cuongtranba/narrated-video/commit/44bf12dea1eed6505d3ca3a51cbfffabcb7c95ae))
+* **scenekind:** nv init --scene &lt;Id&gt; --kind &lt;text|flow|space&gt;, CHK-34 ([#18](https://github.com/cuongtranba/narrated-video/issues/18)) ([6f396aa](https://github.com/cuongtranba/narrated-video/commit/6f396aa45c5006a41636e1ffa88904a40f9143f5)), closes [#9](https://github.com/cuongtranba/narrated-video/issues/9)
+* **space:** Space component and CHK-37 — Three.js scenes through the wrapper ([#23](https://github.com/cuongtranba/narrated-video/issues/23)) ([fc9095e](https://github.com/cuongtranba/narrated-video/commit/fc9095e8d3990b17c88746c9f5c1a8468c1c2f62))
+
 ## [0.4.0](https://github.com/cuongtranba/narrated-video/compare/v0.3.0...v0.4.0) (2026-08-17)
 
 
