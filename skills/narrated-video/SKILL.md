@@ -38,6 +38,7 @@ wrong. `--json` carries the same data with `.next.command` spelled out.
 | Publish the script for a human | `references/localization.md` | `nv script <locale> > docs/…` |
 | The cut is the wrong length | `references/config-schema.md` | `video.targetDuration`, then `nv status` |
 | A check is failing | `references/validate-checks.md` | the remedy line the failure printed |
+| The scene is flat / reads as a slideshow | `references/motion-vocabulary.md` | `Stagger`, `Trace`, `Focus`, `Emphasis`, `Count` in `motion.tsx` |
 
 Also here: `references/timing-model.md` (why lengths are derived and how),
 `references/tts-providers.md` (providers, models, the model that is wrong in a
