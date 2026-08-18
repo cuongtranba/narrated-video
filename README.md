@@ -4,7 +4,7 @@ A skill that ships a prebuilt gate for narrated explainer videos.
 
 `nv` is a single static Go binary. It scaffolds a [Remotion](https://remotion.dev)
 project, derives every scene's length from **measured** audio, synthesizes the
-narration, and runs 36 checks whose exit code is the contract. The project it
+narration, and runs 37 checks whose exit code is the contract. The project it
 writes carries no build tooling of its own — no `scripts/`, no `ajv`, no YAML
 library — so a broken `node_modules` can change what renders but cannot change
 what the gate says.
@@ -25,7 +25,7 @@ time.
 nv init my-video && cd my-video     # wrote 30 files
 nv status                           # ▸ voiceover — next: nv voiceover
 nv voiceover                        # provider `silence`: no API key, no network
-nv validate                         # exit 0 — "36 checks passed"
+nv validate                         # exit 0 — "37 checks passed"
 bun install && bun run studio
 ```
 
@@ -113,6 +113,11 @@ from state the project already held and no command would say:
 - **`package.json` still said `remotion render Explainer`** after the composition
   was renamed — caught by reading the file, after the voiceover was paid for.
   → `nv sync` owns that id; CHK-27 catches a copy edited out from under it.
+- **The 3D scene rendered as a black rectangle**, correct size, correct length,
+  exit code 0. Headless Chromium does not enable a WebGL backend by default;
+  without `--gl=angle` the GPU content is silently dropped. Found by eye, after
+  the render completed without complaint.
+  → `nv sync` writes the flag; CHK-33 catches it when missing.
 - **The running order was reconstructed from prose each turn.**
   → `nv status` computes it.
 
@@ -146,7 +151,7 @@ internal/gen/               the TypeScript codegen
 internal/tts/               provider interface + elevenlabs, silence, say
 internal/mp3/               MPEG frame-header duration measurement
 internal/fonts/             woff2/sfnt cmap reader, unicode-range parser, NFC
-internal/checks/            the 36 checks
+internal/checks/            the 37 checks
 internal/pipeline/          nv status — the checks projected onto the running order
 internal/script/            nv script — the readable script, rendered from content/
 internal/pkgscripts/        package.json — the composition id and the scene-kind deps

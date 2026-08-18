@@ -74,6 +74,38 @@ func TestInit_UnknownKindFailsBeforeWritingAnything(t *testing.T) {
 	}
 }
 
+func TestSync_GLFlagAddedForSpaceSceneAndRemovedWhenGone(t *testing.T) {
+	root := t.TempDir()
+	t.Chdir(root)
+
+	if err := runInit([]string{"."}); err != nil {
+		t.Fatalf("init: %v", err)
+	}
+	if err := runInit([]string{"--scene", "SpaceScene", "--kind", "space"}); err != nil {
+		t.Fatalf("init --scene --kind space: %v", err)
+	}
+
+	if err := runSync(nil); err != nil {
+		t.Fatalf("sync after adding space scene: %v", err)
+	}
+
+	pkgPath := filepath.Join(root, "package.json")
+	if !strings.Contains(readFile(t, pkgPath), "--gl=angle") {
+		t.Fatalf("sync did not add --gl=angle for a space scene:\n%s", readFile(t, pkgPath))
+	}
+
+	spaceScenePath := filepath.Join(root, "src", "scenes", "SpaceScene.tsx")
+	writeString(t, spaceScenePath, "import React from \"react\"\nexport const SpaceScene = () => null\n")
+
+	if err := runSync(nil); err != nil {
+		t.Fatalf("sync after removing space scene: %v", err)
+	}
+
+	if strings.Contains(readFile(t, pkgPath), "--gl=angle") {
+		t.Fatalf("sync did not remove --gl=angle when last space scene was removed:\n%s", readFile(t, pkgPath))
+	}
+}
+
 func failingIDs(t *testing.T, root string) []string {
 	t.Helper()
 	p, err := project.Load(root)

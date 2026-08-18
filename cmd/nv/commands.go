@@ -83,7 +83,32 @@ func syncAt(dir string) error {
 	if err := retargetRenderScripts(root, p.Config.CompositionID(p.Config.Locales.Default)); err != nil {
 		return err
 	}
+	if err := syncGLRenderer(root, p.SceneSources()); err != nil {
+		return err
+	}
 	return reconcileSceneKindDeps(root, p)
+}
+
+func syncGLRenderer(root string, sources map[string]string) error {
+	file, err := pkgscripts.Load(root)
+	if err != nil || file == nil {
+		return err
+	}
+	var data []byte
+	var changed bool
+	if checks.HasSpaceScene(sources) {
+		data, changed = file.WithGLFlag()
+	} else {
+		data, changed = file.WithoutGLFlag()
+	}
+	if !changed {
+		return nil
+	}
+	if err := os.WriteFile(file.Path, data, 0o644); err != nil {
+		return err
+	}
+	fmt.Printf("  %s\n", relTo(root, file.Path))
+	return nil
 }
 
 // reconcileSceneKindDeps keeps package.json installing what the scenes actually

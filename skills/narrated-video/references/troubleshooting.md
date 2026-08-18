@@ -132,6 +132,14 @@ identity trap section in `scene-registry.md`.
 `delayRender`/`continueRender`. The kit's `src/fonts.ts` does this; do not
 "simplify" it into a bare `void Promise.all(...)`.
 
+**The 3D scene is a black rectangle.** The render completed, the file is the right
+size, the right duration, exit code 0 — but the Three.js content is absent. This
+is the GL renderer not being configured. Headless Chromium does not enable a WebGL
+backend by default; without `--gl=angle` the GPU surface is silently dropped.
+CHK-33 catches it. Fix: run `nv sync` (adds the flag to `package.json` scripts
+automatically) and add `Config.setChromiumOpenGlRenderer("angle")` to
+`remotion.config.ts`. See `references/3d.md`.
+
 **The model (or texture, or HDR environment) is missing from some frames.** A 3D
 asset is being loaded without `delayRender`/`continueRender`. Remotion captures
 frames synchronously; any load that begins after capture produces a frame where the

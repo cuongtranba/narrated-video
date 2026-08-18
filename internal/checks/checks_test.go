@@ -465,6 +465,15 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			},
 			wantFail: []string{"CHK-31"},
 		},
+		{
+			name: "a space scene is present but the GL renderer is not configured",
+			mutate: func(t *testing.T, root string) map[string]string {
+				path := filepath.Join(root, "src", "scenes", "Title.tsx")
+				writeFile(t, path, spaceSceneSource)
+				return nil
+			},
+			wantFail: []string{"CHK-33"},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root := buildPassingProject(t)
@@ -809,6 +818,98 @@ copy:
       config: "cấu hình"
       sync: "đồng bộ"
 `
+
+const spaceSceneSource = `import React from "react"
+import { useCurrentFrame } from "remotion"
+import { Space } from "../components/space"
+
+export const Scene = ({ durationInFrames }) => {
+  const frame = useCurrentFrame()
+  return (
+    <Space name="Cube" camera={{ position: [0, 0, 4], fov: 60 }}>
+      <mesh>
+        <boxGeometry />
+      </mesh>
+    </Space>
+  )
+}
+`
+
+func TestGLRendererConfigured_PassesForTextOnlyProject(t *testing.T) {
+	kit := &Kit{
+		Project:      &project.Project{Root: t.TempDir()},
+		SceneSources: map[string]string{"Title": sceneSource},
+	}
+	r := glRendererConfigured(kit)
+	if !r.OK {
+		t.Fatalf("text-only project failed CHK-33: %v", r.Findings)
+	}
+}
+
+func TestGLRendererConfigured_FailsWhenRemotionConfigMissing(t *testing.T) {
+	root := t.TempDir()
+	kit := &Kit{
+		Project:      &project.Project{Root: root},
+		SceneSources: map[string]string{"Space": spaceSceneSource},
+	}
+	r := glRendererConfigured(kit)
+	if r.OK {
+		t.Fatal("space scene without remotion.config.ts passed CHK-33")
+	}
+	foundConfigFinding := false
+	for _, f := range r.Findings {
+		if strings.Contains(f.Where, "remotion.config.ts") {
+			foundConfigFinding = true
+		}
+	}
+	if !foundConfigFinding {
+		t.Fatalf("expected remotion.config.ts finding, got: %v", r.Findings)
+	}
+}
+
+func TestGLRendererConfigured_FailsWhenScriptsMissingFlag(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "remotion.config.ts"), `Config.setChromiumOpenGlRenderer("angle")`)
+	writeFile(t, filepath.Join(root, "package.json"), basePackageJSON)
+	kit := &Kit{
+		Project:      &project.Project{Root: root},
+		SceneSources: map[string]string{"Space": spaceSceneSource},
+	}
+	r := glRendererConfigured(kit)
+	if r.OK {
+		t.Fatal("space scene without --gl=angle in scripts passed CHK-33")
+	}
+	foundScriptFinding := false
+	for _, f := range r.Findings {
+		if strings.Contains(f.Where, "scripts.") {
+			foundScriptFinding = true
+		}
+	}
+	if !foundScriptFinding {
+		t.Fatalf("expected scripts finding, got: %v", r.Findings)
+	}
+}
+
+func TestGLRendererConfigured_PassesWhenBothConfigured(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "remotion.config.ts"), `Config.setChromiumOpenGlRenderer("angle")`)
+	writeFile(t, filepath.Join(root, "package.json"), `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4 --gl=angle",
+    "still": "remotion still Explainer out/explainer.png --gl=angle"
+  },
+  "dependencies": { "remotion": "4.0.512" }
+}`)
+	kit := &Kit{
+		Project:      &project.Project{Root: root},
+		SceneSources: map[string]string{"Space": spaceSceneSource},
+	}
+	r := glRendererConfigured(kit)
+	if !r.OK {
+		t.Fatalf("space scene with GL config failed CHK-33: %v", r.Findings)
+	}
+}
 
 const baseConfig = `kitVersion: 1
 video:
