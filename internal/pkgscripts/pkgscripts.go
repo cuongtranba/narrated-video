@@ -169,6 +169,60 @@ func (f *File) Retargeted(id string) ([]byte, bool) {
 	return out, true
 }
 
+// Scripts returns a copy of every script the file declares.
+func (f *File) Scripts() map[string]string {
+	out := make(map[string]string, len(f.scripts))
+	for k, v := range f.scripts {
+		out[k] = v
+	}
+	return out
+}
+
+// WithGLFlag returns the file's bytes with --gl=angle appended to every
+// managed script that lacks it, and false when nothing needed to change.
+func (f *File) WithGLFlag() ([]byte, bool) {
+	out := f.raw
+	changed := false
+	for _, name := range Managed {
+		script, ok := f.scripts[name]
+		if !ok || strings.Contains(script, "--gl=angle") {
+			continue
+		}
+		next, ok := replaceScript(out, f.span, name, script+" --gl=angle")
+		if !ok {
+			continue
+		}
+		out, changed = next, true
+	}
+	if !changed {
+		return nil, false
+	}
+	return out, true
+}
+
+// WithoutGLFlag returns the file's bytes with --gl=angle removed from every
+// managed script that carries it, and false when nothing needed to change.
+func (f *File) WithoutGLFlag() ([]byte, bool) {
+	out := f.raw
+	changed := false
+	for _, name := range Managed {
+		script, ok := f.scripts[name]
+		if !ok || !strings.Contains(script, " --gl=angle") {
+			continue
+		}
+		want := strings.ReplaceAll(script, " --gl=angle", "")
+		next, ok := replaceScript(out, f.span, name, want)
+		if !ok {
+			continue
+		}
+		out, changed = next, true
+	}
+	if !changed {
+		return nil, false
+	}
+	return out, true
+}
+
 // replaceScript swaps one script's JSON string literal inside the scripts
 // object. Anchoring to that span keeps a `"render"` key elsewhere in the
 // document — a dependency of that name, say — out of reach.

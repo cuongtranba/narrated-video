@@ -1,4 +1,4 @@
-# The 36 checks
+# The 37 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -17,7 +17,7 @@ Remedies below are the exact strings the tool prints.
 - [Scene shape and timing: CHK-12, CHK-13, CHK-25, CHK-26](#scene-shape-and-timing)
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
-- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-34, CHK-36, CHK-37](#source-discipline)
+- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-33, CHK-34, CHK-36, CHK-37](#source-discipline)
 - [Assets: CHK-31, CHK-35](#assets)
 - [Diagrams: CHK-29, CHK-30](#diagrams)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
@@ -388,6 +388,24 @@ fixes, and nothing else moves. A `package.json` that is absent, unreadable, or h
 no `dependencies` object passes — it belongs to the JavaScript project, not to
 `nv`.
 
+### CHK-33 — space scenes have the GL renderer configured
+
+Reads every `src/scenes/<Id>.tsx` the config declares. If any scene imports the
+`Space` wrapper from `../components/space`, the check requires:
+
+- `Config.setChromiumOpenGlRenderer("angle")` in `remotion.config.ts`.
+- `--gl=angle` appended to every managed render and still script in `package.json`.
+
+Remedy: `add --gl=angle to every render/still script in package.json and Config.setChromiumOpenGlRenderer("angle") to remotion.config.ts — without it a 3D scene renders as a blank rectangle and the render still exits 0`
+
+The check does not fire for projects with no space scene.
+
+Headless Chromium does not enable a WebGL backend by default. A space scene
+rendered without the flag produces a correctly sized, correctly timed video with
+exit code 0 — the 3D content is a black rectangle where the scene should be, and
+nothing in the render log says so. `nv sync` manages both surfaces automatically;
+this check catches the flag going missing after the fact.
+
 ### CHK-32 — every diagram node declares width and height
 
 Reads `src/generated/diagrams.ts` and scans every `nodes:` array for node objects
@@ -497,8 +515,7 @@ least likely to notice.
 
 ## Reserved ids
 
-Check ids are permanent labels, not positions. `CHK-33` is held for checks that are not written yet, which is why this
-file lists 36 checks whose highest id is 37. An id is never reused either — one in a CI
+Check ids are permanent labels, not positions. This file lists 37 checks whose highest id is 37. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded

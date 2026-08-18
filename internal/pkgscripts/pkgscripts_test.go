@@ -244,3 +244,113 @@ func TestRetargeted_LeavesIdenticalKeysElsewhereAlone(t *testing.T) {
 		t.Fatalf("the dependency was rewritten:\n%s", out)
 	}
 }
+
+func TestScripts_ReturnsAllScripts(t *testing.T) {
+	f, err := Load(writePackage(t, kitPackageJSON))
+	if err != nil || f == nil {
+		t.Fatalf("Load() = %v, %v", f, err)
+	}
+	scripts := f.Scripts()
+	for _, name := range []string{"studio", "render", "still", "typecheck"} {
+		if _, ok := scripts[name]; !ok {
+			t.Errorf("Scripts() missing %q", name)
+		}
+	}
+}
+
+func TestWithGLFlag_AddsFlag(t *testing.T) {
+	f, err := Load(writePackage(t, kitPackageJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, changed := f.WithGLFlag()
+	if !changed {
+		t.Fatal("WithGLFlag() reported no change when flag was absent")
+	}
+	body := string(out)
+	for _, name := range Managed {
+		if !strings.Contains(body, `"`+name+`":`) {
+			continue
+		}
+		if !strings.Contains(body, "--gl=angle") {
+			t.Errorf("script %q is missing --gl=angle in:\n%s", name, body)
+		}
+	}
+}
+
+func TestWithGLFlag_PreservesExistingFlag(t *testing.T) {
+	body := `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4 --gl=angle",
+    "still": "remotion still Explainer out/explainer.png --gl=angle"
+  }
+}
+`
+	f, err := Load(writePackage(t, body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, changed := f.WithGLFlag()
+	if changed {
+		t.Fatalf("WithGLFlag() rewrote scripts that already had the flag:\n%s", out)
+	}
+}
+
+func TestWithGLFlag_SurvivesCompositionRename(t *testing.T) {
+	body := `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4 --gl=angle",
+    "still": "remotion still Explainer out/explainer.png --gl=angle"
+  }
+}
+`
+	f, err := Load(writePackage(t, body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	renamed, ok := f.Retargeted("NewExplainer")
+	if !ok {
+		t.Fatal("Retargeted() reported no change")
+	}
+	if !strings.Contains(string(renamed), "--gl=angle") {
+		t.Fatalf("--gl=angle did not survive composition rename:\n%s", renamed)
+	}
+	if strings.Contains(string(renamed), "render Explainer") || strings.Contains(string(renamed), "still Explainer") {
+		t.Fatalf("old composition id survived rename:\n%s", renamed)
+	}
+}
+
+func TestWithoutGLFlag_RemovesFlag(t *testing.T) {
+	body := `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4 --gl=angle",
+    "still": "remotion still Explainer out/explainer.png --gl=angle"
+  }
+}
+`
+	f, err := Load(writePackage(t, body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, changed := f.WithoutGLFlag()
+	if !changed {
+		t.Fatal("WithoutGLFlag() reported no change when flag was present")
+	}
+	if strings.Contains(string(out), "--gl=angle") {
+		t.Fatalf("--gl=angle survived WithoutGLFlag():\n%s", out)
+	}
+}
+
+func TestWithoutGLFlag_SilentWhenAbsent(t *testing.T) {
+	f, err := Load(writePackage(t, kitPackageJSON))
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, changed := f.WithoutGLFlag()
+	if changed {
+		t.Fatalf("WithoutGLFlag() rewrote scripts that had no flag:\n%s", out)
+	}
+}
