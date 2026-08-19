@@ -12,8 +12,12 @@
 package scenekind
 
 import (
+	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/cuongtranba/narrated-video/kit"
 )
 
 // Dep is an npm package a kind cannot render without, at the range the kit is
@@ -27,9 +31,25 @@ type Kind struct {
 	Name string
 	// TemplatePath is the file inside kit.FS that `nv init --scene` copies.
 	TemplatePath string
-	Dependencies []Dep
+	// Packages names what the kind imports. The range each one resolves to is
+	// not written here: it lives in the template's package.json, which is the
+	// file a scaffolded project actually receives. A version repeated here
+	// could disagree with the one installed, and CHK-34 compares them exactly —
+	// so the disagreement would surface as a check failure in the user's
+	// project, with `nv sync` "fixing" it by undoing their upgrade.
+	Packages []string
 	// Reference is where the author reads about this kind once it is scaffolded.
 	Reference string
+}
+
+// Dependencies pairs each of the kind's packages with the range the template
+// installs it at.
+func (k Kind) Dependencies() []Dep {
+	deps := make([]Dep, 0, len(k.Packages))
+	for _, name := range k.Packages {
+		deps = append(deps, Dep{Name: name, Version: templateVersions[name]})
+	}
+	return deps
 }
 
 // Text is the kind a scene has when nothing in its source says otherwise: it
@@ -45,19 +65,55 @@ var kinds = []Kind{
 	{
 		Name:         "flow",
 		TemplatePath: "src/scenes/_template.flow.tsx",
-		Dependencies: []Dep{{Name: "@xyflow/react", Version: "^12.0.0"}},
+		Packages:     []string{"@xyflow/react"},
 		Reference:    "references/scene-registry.md#flow",
 	},
 	{
 		Name:         "space",
 		TemplatePath: "src/scenes/_template.space.tsx",
-		Dependencies: []Dep{
-			{Name: "@react-three/fiber", Version: "^9.0.0"},
-			{Name: "@remotion/three", Version: "^4.0.0"},
-			{Name: "three", Version: "^0.175.0"},
-		},
-		Reference: "references/scene-registry.md#space",
+		Packages:     []string{"@react-three/fiber", "@remotion/three", "three"},
+		Reference:    "references/scene-registry.md#space",
 	},
+}
+
+// templateVersions is what the embedded package.json installs, keyed by package
+// name. Reading it at init makes a kind that names a package the template does
+// not install a build-time failure rather than a scaffolded project whose
+// import cannot resolve.
+var templateVersions = mustTemplateVersions()
+
+func mustTemplateVersions() map[string]string {
+	raw, err := kit.FS.ReadFile("package.json")
+	if err != nil {
+		panic(fmt.Sprintf("scenekind: reading the template package.json: %v", err))
+	}
+	versions, err := templateVersionsFrom(raw)
+	if err != nil {
+		panic("scenekind: " + err.Error())
+	}
+	return versions
+}
+
+// templateVersionsFrom reads the dependency ranges out of a package.json and
+// refuses one that does not install every package the kinds import — the case
+// that would otherwise scaffold a scene whose import cannot resolve, and leave
+// CHK-34 comparing against an empty version.
+func templateVersionsFrom(raw []byte) (map[string]string, error) {
+	var doc struct {
+		Dependencies map[string]string `json:"dependencies"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		return nil, fmt.Errorf("parsing the template package.json: %w", err)
+	}
+
+	for _, kind := range kinds {
+		for _, name := range kind.Packages {
+			if doc.Dependencies[name] == "" {
+				return nil, fmt.Errorf("the %s kind needs %s, which kit/package.json does not install", kind.Name, name)
+			}
+		}
+	}
+	return doc.Dependencies, nil
 }
 
 // All returns every kind in definition order.
@@ -85,8 +141,8 @@ func Names() []string {
 // imports. A module that imports nothing kind-specific is text.
 func Of(source string) Kind {
 	for _, kind := range kinds {
-		for _, dep := range kind.Dependencies {
-			if importsPackage(source, dep.Name) {
+		for _, name := range kind.Packages {
+			if importsPackage(source, name) {
 				return kind
 			}
 		}
@@ -100,7 +156,7 @@ func Of(source string) Kind {
 func Required(sources map[string]string) []Dep {
 	union := map[string]Dep{}
 	for _, source := range sources {
-		for _, dep := range Of(source).Dependencies {
+		for _, dep := range Of(source).Dependencies() {
 			union[dep.Name] = dep
 		}
 	}

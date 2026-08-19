@@ -39,6 +39,32 @@ Nothing flows back. **Every file under `src/generated/` is overwritten by
 
 Then: `nv sync`, `nv validate`, `bun run typecheck`.
 
+## Two TypeScripts, on purpose
+
+This project installs TypeScript twice, and it is not a mistake to tidy up:
+
+| Package | Version | Who uses it |
+| --- | --- | --- |
+| `typescript-native` | 7.0.2 | `bun run typecheck` — the native compiler, and the one whose verdict counts |
+| `typescript` | 6.0.3 | `bun run lint` — typescript-eslint parses with the 6.0 API |
+
+TypeScript 7.0 is a native port that dropped the JavaScript compiler API, and
+typescript-eslint has not yet been rebuilt against its replacement
+([typescript-eslint#10940]). Until it is, a project can type-check with 7 or
+lint with 6, and installing both is how it does both.
+
+Two consequences worth knowing:
+
+- **Run the scripts, not the binaries.** A bare `tsc` resolves to the 6.0
+  compiler. `bun run typecheck` names the 7.0 one explicitly.
+- **Only type-checking is split.** The lint config is not type-aware, so 6.0
+  only parses syntax there — it never renders a second opinion about your types.
+
+When typescript-eslint ships 7.x support, `typescript-native` folds back into
+`typescript` and this section goes away.
+
+[typescript-eslint#10940]: https://github.com/typescript-eslint/typescript-eslint/issues/10940
+
 ## Scene lengths are derived, not chosen
 
 A scene lasts `leadFrames + narration + tailFrames`, with the cross-fade repaid

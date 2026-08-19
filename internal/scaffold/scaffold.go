@@ -115,7 +115,7 @@ func AddScene(root, id, kindName string, out io.Writer) error {
 	// Only this kind's dependencies, not the whole project's: reconciliation
 	// adds and never removes, so scenes already in the project have already
 	// contributed theirs.
-	installed, err := pkgscripts.ReconcileDepsAt(root, kind.Dependencies)
+	installed, err := pkgscripts.ReconcileDepsAt(root, kind.Dependencies())
 	if err != nil {
 		return err
 	}
@@ -133,8 +133,9 @@ func AddScene(root, id, kindName string, out io.Writer) error {
 }
 
 func depNames(kind scenekind.Kind) []string {
-	names := make([]string, 0, len(kind.Dependencies))
-	for _, dep := range kind.Dependencies {
+	deps := kind.Dependencies()
+	names := make([]string, 0, len(deps))
+	for _, dep := range deps {
 		names = append(names, dep.Name+"@"+dep.Version)
 	}
 	return names

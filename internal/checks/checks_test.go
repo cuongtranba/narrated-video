@@ -2,6 +2,7 @@ package checks
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,8 +12,41 @@ import (
 
 	"github.com/cuongtranba/narrated-video/internal/gen"
 	"github.com/cuongtranba/narrated-video/internal/project"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 	"github.com/cuongtranba/narrated-video/internal/voiceover"
 )
+
+// packageJSONInstalling renders a package.json that installs exactly what the
+// named kind requires, so a test isolating a wrapper-bypass check does not also
+// trip CHK-34. The versions are read from scenekind rather than written out:
+// spelled literally, every template bump would turn these cases into failures
+// that say nothing about the check under test.
+func packageJSONInstalling(t *testing.T, kindName string) string {
+	t.Helper()
+
+	kind, ok := scenekind.Lookup(kindName)
+	if !ok {
+		t.Fatalf("no such scene kind: %q", kindName)
+	}
+
+	lines := make([]string, 0, len(kind.Packages)+1)
+	for _, dep := range kind.Dependencies() {
+		lines = append(lines, fmt.Sprintf("    %q: %q,", dep.Name, dep.Version))
+	}
+	lines = append(lines, `    "remotion": "4.0.513"`)
+
+	return `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4",
+    "still": "remotion still Explainer out/explainer.png"
+  },
+  "dependencies": {
+` + strings.Join(lines, "\n") + `
+  }
+}
+`
+}
 
 // A gate is only worth its exit code if each check fires on its own failure and
 // stays quiet otherwise. That needs a project that genuinely passes everything
@@ -174,18 +208,7 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		{
 			name: "a scene imports React Flow directly instead of through the Diagram wrapper",
 			mutate: func(t *testing.T, root string) map[string]string {
-				writeFile(t, filepath.Join(root, "package.json"), `{
-  "private": true,
-  "scripts": {
-    "render": "remotion render Explainer out/explainer.mp4",
-    "still": "remotion still Explainer out/explainer.png"
-  },
-  "dependencies": {
-    "@xyflow/react": "^12.0.0",
-    "remotion": "4.0.512"
-  }
-}
-`)
+				writeFile(t, filepath.Join(root, "package.json"), packageJSONInstalling(t, "flow"))
 				path := filepath.Join(root, "src", "scenes", "Title.tsx")
 				writeFile(t, path, `import { ReactFlow } from "@xyflow/react"`+"\n"+read(t, path))
 				return nil
@@ -206,20 +229,7 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 		{
 			name: "a scene imports @react-three/fiber directly instead of through the Space wrapper",
 			mutate: func(t *testing.T, root string) map[string]string {
-				writeFile(t, filepath.Join(root, "package.json"), `{
-  "private": true,
-  "scripts": {
-    "render": "remotion render Explainer out/explainer.mp4",
-    "still": "remotion still Explainer out/explainer.png"
-  },
-  "dependencies": {
-    "@react-three/fiber": "^9.0.0",
-    "@remotion/three": "^4.0.0",
-    "three": "^0.175.0",
-    "remotion": "4.0.512"
-  }
-}
-`)
+				writeFile(t, filepath.Join(root, "package.json"), packageJSONInstalling(t, "space"))
 				path := filepath.Join(root, "src", "scenes", "Title.tsx")
 				writeFile(t, path, `import { useFrame } from "@react-three/fiber"`+"\n"+read(t, path))
 				return nil

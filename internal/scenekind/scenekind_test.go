@@ -65,7 +65,7 @@ func TestAll_TemplatesSatisfyTheSceneInvariants(t *testing.T) {
 // frame at best, so every declared dependency must carry a version to install.
 func TestAll_DependenciesAreVersioned(t *testing.T) {
 	for _, kind := range All() {
-		for _, dep := range kind.Dependencies {
+		for _, dep := range kind.Dependencies() {
 			if dep.Name == "" || dep.Version == "" {
 				t.Errorf("kind %q declares %+v, want both a name and a version", kind.Name, dep)
 			}
@@ -78,7 +78,7 @@ func TestLookup(t *testing.T) {
 	if !ok {
 		t.Fatal("the default kind is not in the registry")
 	}
-	if text.TemplatePath != "src/scenes/_template.tsx" || len(text.Dependencies) != 0 {
+	if text.TemplatePath != "src/scenes/_template.tsx" || len(text.Packages) != 0 {
 		t.Errorf("text = %+v, want the original template and no extra dependencies", text)
 	}
 
