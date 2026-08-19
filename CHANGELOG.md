@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.8.0](https://github.com/cuongtranba/narrated-video/compare/v0.7.0...v0.8.0) (2026-08-19)
+
+
+### Features
+
+* **kit:** the scaffold ships its lockfile ([#36](https://github.com/cuongtranba/narrated-video/issues/36)) ([3110f1b](https://github.com/cuongtranba/narrated-video/commit/3110f1b63f70bd6b19889db40ef8e90f44640fd2))
+
+
+### Bug Fixes
+
+* **ci:** the binaries gate no longer dies on fork and Dependabot PRs ([d2e63bb](https://github.com/cuongtranba/narrated-video/commit/d2e63bb1eef6ca7faec40543371d19647e4395a5))
+* **kit:** CHK-38 — the Remotion family is pinned to one exact version ([#31](https://github.com/cuongtranba/narrated-video/issues/31)) ([2e8e27d](https://github.com/cuongtranba/narrated-video/commit/2e8e27d059e044ce231791a039e614927a646a51))
+* **scenekind:** recognise a scene by its wrapper import, not only its packages ([#33](https://github.com/cuongtranba/narrated-video/issues/33)) ([991e6b2](https://github.com/cuongtranba/narrated-video/commit/991e6b23cea4fd2d96a8e8b76122b12bfc5405a3))
+* **sync:** nv sync owns the GL renderer in remotion.config.ts too ([#35](https://github.com/cuongtranba/narrated-video/issues/35)) ([2b51bb8](https://github.com/cuongtranba/narrated-video/commit/2b51bb8050772cb836ae76204e680f23bd510ffa))
+
 ## [0.7.0](https://github.com/cuongtranba/narrated-video/compare/v0.6.0...v0.7.0) (2026-08-18)
 
 
