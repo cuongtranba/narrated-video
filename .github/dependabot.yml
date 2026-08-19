@@ -14,6 +14,42 @@ updates:
     commit-message:
       prefix: "ci"
 
-# The kit's npm pins are deliberately not automated. A Remotion bump changes
-# what the template renders, and the end-to-end job type-checks a scaffolded
-# project — so those move by hand, with that gate green.
+  # The kit's npm pins were previously moved by hand, on the argument that a
+  # Remotion bump changes what the template renders. The end-to-end job now
+  # installs the scaffolded project, type-checks it, lints it, and resolves its
+  # compositions — so that argument is the case for automating these, not
+  # against it: the bump arrives as a PR that has to clear the same gate.
+  #
+  # Versions are grouped because they are not independent. Every @remotion/*
+  # package is released in lockstep and refuses to load against a different
+  # minor, and react/react-dom/@types/react have to agree for @react-three/fiber
+  # to satisfy its peer range. Ungrouped, each of those would open a PR that
+  # cannot go green on its own.
+  - package-ecosystem: npm
+    directory: /kit
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: "deps"
+    groups:
+      remotion:
+        patterns:
+          - "remotion"
+          - "@remotion/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+      three:
+        patterns:
+          - "three"
+          - "@react-three/*"
+    ignore:
+      # Held deliberately, not stale. typescript-eslint cannot load against the
+      # TypeScript 7 API, so the template installs 7 for `bun run typecheck` and
+      # 6 for the lint chain. Dependabot raising this to 7 would break linting
+      # in every scaffolded project; it moves when typescript-eslint ships
+      # support (typescript-eslint/typescript-eslint#10940).
+      - dependency-name: "typescript"
+        versions: ["7.x"]

@@ -127,11 +127,19 @@ jobs:
 
       # A new Remotion release breaking the template should surface here, not in
       # someone's first hour with the tool.
-      - name: The scaffolded project type-checks and its compositions resolve
+      #
+      # Both gates run through `bun run`, never `bunx`. The template installs two
+      # compilers — TypeScript 7 for checking, TypeScript 6 because typescript-eslint
+      # still needs the API 7.0 dropped — and a bare `bunx tsc` resolves to the 6
+      # binary, which would quietly check with the wrong one. The scripts name the
+      # compiler explicitly. Linting is gated for the same reason: a lint chain that
+      # cannot load its parser fails here rather than in a user's editor.
+      - name: The scaffolded project type-checks, lints, and its compositions resolve
         run: |
           cd /tmp/demo
           bun install
-          bunx tsc --noEmit
+          bun run typecheck
+          bun run lint
           bunx remotion compositions src/index.ts
 
   # Proves that two renders of the same frame, in separate processes, produce
