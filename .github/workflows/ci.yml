@@ -169,12 +169,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         if: steps.changed.outputs.run == 'true'
 
-      - name: Install Chrome for headless rendering
-        if: steps.changed.outputs.run == 'true'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y google-chrome-stable
-
       - name: Scaffold, voiceover, validate
         if: steps.changed.outputs.run == 'true'
         run: |
@@ -184,6 +178,15 @@ jobs:
           "$nv" voiceover
           "$nv" validate
           bun install
+
+      # Remotion pins its own Chrome Headless Shell and deliberately ignores a
+      # browser installed beside it, so a distro Chrome here was downloaded,
+      # never used, and eventually hung the job. Fetching the pinned shell as
+      # its own step keeps a download failure legible as a download failure
+      # rather than a render that mysteriously produces nothing.
+      - name: Fetch the Chrome build Remotion pins
+        if: steps.changed.outputs.run == 'true'
+        run: cd /tmp/det && bunx remotion browser ensure
 
       - name: Render frame 15 twice and compare hashes
         if: steps.changed.outputs.run == 'true'
