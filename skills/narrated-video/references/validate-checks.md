@@ -472,8 +472,14 @@ The check does not fire for projects with no space scene.
 Headless Chromium does not enable a WebGL backend by default. A space scene
 rendered without the flag produces a correctly sized, correctly timed video with
 exit code 0 — the 3D content is a black rectangle where the scene should be, and
-nothing in the render log says so. `nv sync` manages both surfaces automatically;
-this check catches the flag going missing after the fact.
+nothing in the render log says so.
+
+`nv sync` manages both surfaces — it appends `--gl=angle` to the managed scripts
+and writes the `Config` call into `remotion.config.ts` when a space scene appears,
+and removes both when the last one goes. This check catches either half going
+missing after the fact. Until it managed the config call, adding a 3D scene meant
+a hand edit to a file the tool otherwise owns, and this was the one check in the
+gate whose remedy `nv` could not carry out.
 
 A scene that bypasses the wrapper counts as a space scene here. It is breaking
 the rule CHK-37 states, but it is still rendering 3D, and headless Chromium does

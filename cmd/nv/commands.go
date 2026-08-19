@@ -18,6 +18,7 @@ import (
 	"github.com/cuongtranba/narrated-video/internal/pipeline"
 	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
 	"github.com/cuongtranba/narrated-video/internal/project"
+	"github.com/cuongtranba/narrated-video/internal/remotionconfig"
 	"github.com/cuongtranba/narrated-video/internal/scaffold"
 	"github.com/cuongtranba/narrated-video/internal/scenekind"
 	"github.com/cuongtranba/narrated-video/internal/script"
@@ -89,14 +90,34 @@ func syncAt(dir string) error {
 	return reconcileSceneKindDeps(root, p)
 }
 
+// syncGLRenderer keeps both halves of the GL choice in step with whether any
+// scene renders 3D: the --gl=angle flag on the render scripts, and the backend
+// selection in remotion.config.ts. Managing only the first left CHK-33's other
+// half as a hand edit — the one step in the whole gate whose remedy the tool
+// could not perform, on the check whose failure is hardest to see.
 func syncGLRenderer(root string, sources map[string]string) error {
+	wantGL := checks.HasSpaceScene(sources)
+
+	if err := syncGLScripts(root, wantGL); err != nil {
+		return err
+	}
+
+	changed, err := remotionconfig.ReconcileAt(root, wantGL)
+	if err != nil || !changed {
+		return err
+	}
+	fmt.Printf("  %s\n", remotionconfig.FileName)
+	return nil
+}
+
+func syncGLScripts(root string, wantGL bool) error {
 	file, err := pkgscripts.Load(root)
 	if err != nil || file == nil {
 		return err
 	}
 	var data []byte
 	var changed bool
-	if checks.HasSpaceScene(sources) {
+	if wantGL {
 		data, changed = file.WithGLFlag()
 	} else {
 		data, changed = file.WithoutGLFlag()
