@@ -11,5 +11,5 @@ import "embed"
 // friction — a pattern broad enough to sweep the directory would also sweep
 // whatever a future contributor leaves lying in it.
 //
-//go:embed all:src all:public all:content video.config.yaml package.json tsconfig.json remotion.config.ts eslint.config.mjs gitignore env.example README.md
+//go:embed all:src all:public all:content video.config.yaml package.json bun.lock tsconfig.json remotion.config.ts eslint.config.mjs gitignore env.example README.md
 var FS embed.FS

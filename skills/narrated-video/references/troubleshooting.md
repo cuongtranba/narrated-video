@@ -14,8 +14,9 @@ big committed audio gets, and the errors that actually come up.
 
 ## The 29 scaffold steps this replaces
 
-`nv init` writes 29 files plus the schema in one command. Assembled by hand, in
-the session this tool came from, that was roughly 29 tool calls:
+`nv init` writes 37 files — the template, the schema and the lockfile — in one
+command. Assembled by hand, in the session this tool came from, that was roughly
+29 tool calls:
 
 - `create-video`, then **undoing** its tailwind template
 - four separate `remotion add` calls (transitions, media, fonts, google-fonts)
@@ -36,6 +37,13 @@ or a `scripts/` directory with `ajv` and `@remotion/media-parser` in it — stop
 `nv init --scene=Middle` both add a scene. If you are on an older build where the
 space form scaffolded a whole project into `./Middle` instead, delete that
 directory and use `--scene=Middle`.
+
+**`nv init` ships a `bun.lock`.** The scaffold installs the exact tree this repo
+tested against, rather than re-resolving the caret ranges on `three`,
+`@xyflow/react` and `@react-three/fiber` at whatever versions npm has that day.
+`bun install --frozen-lockfile` is the way to prove nothing moved. Commit it —
+it is the record of what your renders were made with. To take a dependency
+forward deliberately, `bun update <pkg>` and re-run the gate.
 
 **`--kind` picks the template a scene starts from.** `text` (the default), `flow`
 or `space`; see `scene-registry.md`. It also adds that kind's npm packages to
