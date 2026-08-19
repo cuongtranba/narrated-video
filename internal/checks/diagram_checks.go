@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/cuongtranba/narrated-video/internal/project"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 )
 
 // CHK-29. A typo'd endpoint renders an edge from or to nowhere while the process
@@ -161,13 +162,21 @@ func nodesWithoutSize(source, location string) []Finding {
 func scenesUseDiagramWrapper(kit *Kit) Result {
 	const id, title = "CHK-36", "scene modules import React Flow only through the Diagram wrapper"
 
+	// Read from the flow kind rather than named again here, for the reason
+	// CHK-37 does the same: a package added to the kind but not to a copy here
+	// would be one the wrapper rule quietly stopped covering.
+	flow, _ := scenekind.Lookup(scenekind.Flow)
+
 	var findings []Finding
 	for _, sceneID := range sortedStringKeys(kit.SceneSources) {
-		if importsPath(kit.SceneSources[sceneID], "@xyflow/react") {
-			findings = append(findings, Finding{
-				Where:  sceneID,
-				Detail: "imports @xyflow/react directly",
-			})
+		for _, pkg := range flow.Packages {
+			if importsPath(kit.SceneSources[sceneID], pkg) {
+				findings = append(findings, Finding{
+					Where:  sceneID,
+					Detail: "imports " + pkg + " directly",
+				})
+				break
+			}
 		}
 	}
 	return fail(id, title,

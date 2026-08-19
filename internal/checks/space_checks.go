@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 )
 
 var glRendererRe = regexp.MustCompile(`setChromiumOpenGlRenderer\s*\(\s*["']angle["']`)
@@ -54,9 +55,14 @@ func glRendererConfigured(kit *Kit) Result {
 		sortedFindings(findings))
 }
 
+// HasSpaceScene reports whether anything in the project renders 3D. It asks
+// scenekind rather than matching the wrapper path again here: the path lived in
+// two places, and while they disagreed CHK-33 could see a space scene that
+// CHK-34 could not. Asking also counts a scene that bypasses the wrapper, which
+// still renders black without the GL renderer.
 func HasSpaceScene(sources map[string]string) bool {
 	for _, source := range sources {
-		if importsPath(source, "../components/space") {
+		if scenekind.Draws(source, scenekind.Space) {
 			return true
 		}
 	}
@@ -70,11 +76,14 @@ func HasSpaceScene(sources map[string]string) bool {
 func scenesUseSpaceWrapper(kit *Kit) Result {
 	const id, title = "CHK-37", "scene modules import Three.js only through the Space wrapper"
 
-	forbidden := []string{"@react-three/fiber", "three", "@remotion/three"}
+	// The forbidden packages are exactly what the space kind installs, so they
+	// are read from there rather than listed again: a package added to the kind
+	// but not to a copy here would be one the wrapper rule stopped covering.
+	space, _ := scenekind.Lookup(scenekind.Space)
 
 	var findings []Finding
 	for _, sceneID := range sortedStringKeys(kit.SceneSources) {
-		for _, pkg := range forbidden {
+		for _, pkg := range space.Packages {
 			if importsPackageExact(kit.SceneSources[sceneID], pkg) {
 				findings = append(findings, Finding{
 					Where:  sceneID,

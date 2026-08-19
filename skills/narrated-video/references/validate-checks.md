@@ -368,11 +368,29 @@ to `nv`.
 
 ### CHK-34 — package.json installs what the scene kinds in use require
 
-Reads every `src/scenes/<Id>.tsx` the config declares, works out each one's kind
-from the packages it imports, and takes the union of what those kinds need. Fails
-when `package.json` does not list one of them, or lists it at a different version.
+Reads every `src/scenes/<Id>.tsx` the config declares, works out which kinds each
+one draws on, and takes the union of what those kinds need. Fails when
+`package.json` does not list one of them, or lists it at a different version.
 
 Remedy: `run: nv sync`
+
+A scene is recognised by **either** mark it can carry:
+
+| Mark | Who leaves it |
+| --- | --- |
+| the wrapper import — `../components/space`, `../components/diagram` | a compliant scene; CHK-36 and CHK-37 forbid the packages, so this is the only trace it leaves |
+| a direct package import — `three`, `@xyflow/react`, … | a scene that bypasses the wrapper; still counted, so the missing package is named alongside the bypass |
+
+Both are needed. Matching only the packages meant every *correctly written* flow
+and space scene read back as a text scene, and this check went quiet about them
+entirely — a project could delete `@remotion/three` from `package.json` and still
+be told "all checks passed" while `remotion compositions` failed with
+`Can't resolve '@remotion/three'`. That is precisely the failure the check
+exists to prevent, and the rule that forbids direct imports is what hid it.
+
+A scene that draws on more than one kind — a diagram inside a 3D stage — needs
+both sets of packages, and the union covers all of them rather than just the
+first.
 
 A scene's kind lives in exactly one place — its imports — and the packages that
 back it live in another, `package.json`. Two surfaces, and when they disagree the
@@ -440,8 +458,9 @@ version. Unlike `render`, it exits 1 on a mismatch, and CI runs it after
 
 ### CHK-33 — space scenes have the GL renderer configured
 
-Reads every `src/scenes/<Id>.tsx` the config declares. If any scene imports the
-`Space` wrapper from `../components/space`, the check requires:
+Reads every `src/scenes/<Id>.tsx` the config declares. If any scene draws on the
+space kind — through the `Space` wrapper, or by importing `three`,
+`@react-three/fiber` or `@remotion/three` directly — the check requires:
 
 - `Config.setChromiumOpenGlRenderer("angle")` in `remotion.config.ts`.
 - `--gl=angle` appended to every managed render and still script in `package.json`.
@@ -455,6 +474,10 @@ rendered without the flag produces a correctly sized, correctly timed video with
 exit code 0 — the 3D content is a black rectangle where the scene should be, and
 nothing in the render log says so. `nv sync` manages both surfaces automatically;
 this check catches the flag going missing after the fact.
+
+A scene that bypasses the wrapper counts as a space scene here. It is breaking
+the rule CHK-37 states, but it is still rendering 3D, and headless Chromium does
+not grow a WebGL backend because the import went around the wrapper.
 
 ### CHK-32 — every diagram node declares width and height
 
