@@ -185,9 +185,18 @@ for all three. A kind is a starting point, not a dialect.
 **The kind is never written down.** It is read back out of the module's imports,
 because a `kind:` field in the config would be a second answer the imports could
 contradict, and the one that lies is always the one nobody is looking at. CHK-34
-derives the packages the scenes actually import and fails when `package.json` does
+derives the packages the scenes actually need and fails when `package.json` does
 not install them; `nv sync` reconciles the same way. Both add and correct, and
 neither removes — a package you reached for yourself stays yours.
+
+What counts as the mark of a kind is the **wrapper** import — `../components/space`,
+`../components/diagram` — or a direct import of one of the kind's packages. The
+wrapper has to count, because CHK-36 and CHK-37 forbid the packages: a scene
+written the way the rules require names only the wrapper, and matching packages
+alone made every compliant flow and space scene read back as `text`.
+
+A scene may draw on more than one kind — a diagram inside a 3D stage — and it
+gets the packages of all of them.
 
 ### flow
 

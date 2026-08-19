@@ -31,6 +31,11 @@ type Kind struct {
 	Name string
 	// TemplatePath is the file inside kit.FS that `nv init --scene` copies.
 	TemplatePath string
+	// Wrapper is the kit component a scene of this kind renders through, as the
+	// scene imports it. It is the mark a *compliant* scene carries: CHK-36 and
+	// CHK-37 forbid importing the packages directly, so a scene written the way
+	// the rules require names the wrapper and nothing else.
+	Wrapper string
 	// Packages names what the kind imports. The range each one resolves to is
 	// not written here: it lives in the template's package.json, which is the
 	// file a scaffolded project actually receives. A version repeated here
@@ -54,7 +59,11 @@ func (k Kind) Dependencies() []Dep {
 
 // Text is the kind a scene has when nothing in its source says otherwise: it
 // needs nothing beyond what every project already installs.
-const Text = "text"
+const (
+	Text  = "text"
+	Flow  = "flow"
+	Space = "space"
+)
 
 var kinds = []Kind{
 	{
@@ -63,14 +72,16 @@ var kinds = []Kind{
 		Reference:    "references/scene-registry.md",
 	},
 	{
-		Name:         "flow",
+		Name:         Flow,
 		TemplatePath: "src/scenes/_template.flow.tsx",
+		Wrapper:      "../components/diagram",
 		Packages:     []string{"@xyflow/react"},
 		Reference:    "references/scene-registry.md#flow",
 	},
 	{
-		Name:         "space",
+		Name:         Space,
 		TemplatePath: "src/scenes/_template.space.tsx",
+		Wrapper:      "../components/space",
 		Packages:     []string{"@react-three/fiber", "@remotion/three", "three"},
 		Reference:    "references/scene-registry.md#space",
 	},
@@ -137,27 +148,68 @@ func Names() []string {
 	return names
 }
 
-// Of reports the kind a scene module is written in, judged by the packages it
-// imports. A module that imports nothing kind-specific is text.
+// Of reports the kind a scene module is written in. A module that draws on
+// nothing kind-specific is text; one that draws on several is named by the first
+// in definition order, which is what `--kind` and the reference link mean by a
+// scene's kind. Ask Required when the question is what to install instead.
 func Of(source string) Kind {
-	for _, kind := range kinds {
-		for _, name := range kind.Packages {
-			if importsPackage(source, name) {
-				return kind
-			}
-		}
+	if used := AllOf(source); len(used) > 0 {
+		return used[0]
 	}
 	text, _ := Lookup(Text)
 	return text
 }
 
+// Draws reports whether a scene module draws on the named kind. Callers that
+// care about one kind — CHK-33 asking whether anything here is 3D — ask this
+// rather than comparing against Of, which names only the first of several.
+func Draws(source, kindName string) bool {
+	for _, kind := range AllOf(source) {
+		if kind.Name == kindName {
+			return true
+		}
+	}
+	return false
+}
+
+// AllOf reports every kind a scene module draws on, in definition order.
+//
+// Two marks count, because there are two ways a scene can reach a kind. The
+// wrapper import is how a compliant scene does it — CHK-36 and CHK-37 forbid the
+// packages, so the wrapper is the only trace a correct scene leaves. A direct
+// package import is how a rule-breaking scene does it, and it still counts:
+// CHK-34 has to keep naming the packages that scene needs, or the author gets
+// one complaint about the bypass and none about the unresolved import behind it.
+func AllOf(source string) []Kind {
+	var used []Kind
+	for _, kind := range kinds {
+		if kind.Wrapper != "" && importsPackage(source, kind.Wrapper) {
+			used = append(used, kind)
+			continue
+		}
+		for _, name := range kind.Packages {
+			if importsPackage(source, name) {
+				used = append(used, kind)
+				break
+			}
+		}
+	}
+	return used
+}
+
 // Required is the union of what the given scene modules need, sorted by package
 // name so the answer reads the same way twice.
+//
+// It unions across every kind each scene draws on, not just the one Of names: a
+// scene that puts a diagram inside a 3D stage needs both sets, and installing
+// only the first leaves the other's import to fail at bundle time.
 func Required(sources map[string]string) []Dep {
 	union := map[string]Dep{}
 	for _, source := range sources {
-		for _, dep := range Of(source).Dependencies() {
-			union[dep.Name] = dep
+		for _, kind := range AllOf(source) {
+			for _, dep := range kind.Dependencies() {
+				union[dep.Name] = dep
+			}
 		}
 	}
 

@@ -216,15 +216,17 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-36"},
 		},
 		{
-			// The scene needs packages nothing installs, and it bypasses the
-			// Space wrapper, so both CHK-34 and CHK-37 fire.
+			// The scene needs packages nothing installs (CHK-34) and it
+			// bypasses the Space wrapper (CHK-37). It is still a 3D scene, so it
+			// needs the GL renderer too (CHK-33) — going around the wrapper does
+			// not make headless Chromium grow a WebGL backend.
 			name: "a scene imports three directly without packages installed",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "src", "scenes", "Iteration.tsx")
 				writeFile(t, path, `import { Mesh } from "three"`+"\n"+read(t, path))
 				return nil
 			},
-			wantFail: []string{"CHK-34", "CHK-37"},
+			wantFail: []string{"CHK-33", "CHK-34", "CHK-37"},
 		},
 		{
 			name: "a scene imports @react-three/fiber directly instead of through the Space wrapper",
@@ -234,7 +236,10 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 				writeFile(t, path, `import { useFrame } from "@react-three/fiber"`+"\n"+read(t, path))
 				return nil
 			},
-			wantFail: []string{"CHK-37"},
+			// The packages are installed, so CHK-34 is quiet — but a scene
+			// reaching r3f directly is still 3D, and CHK-33 wants the GL
+			// renderer for it.
+			wantFail: []string{"CHK-33", "CHK-37"},
 		},
 		{
 			// A range on a Remotion package resolves to a second copy of
@@ -430,13 +435,16 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-22"},
 		},
 		{
+			// Rewriting a text scene as a flow scene makes the project need
+			// @xyflow/react, which this package.json does not install — so
+			// CHK-34 fires beside the cue violation under test.
 			name: "a diagram walk revealed on a literal frame count instead of a fraction",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "src", "scenes", "Title.tsx")
 				writeFile(t, path, badDiagramRevealScene)
 				return nil
 			},
-			wantFail: []string{"CHK-22"},
+			wantFail: []string{"CHK-22", "CHK-34"},
 		},
 		{
 			name: "a scene reaches for the timeline",
@@ -498,13 +506,15 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-31"},
 		},
 		{
+			// Same cascade: a space scene needs three packages this
+			// package.json does not install, so CHK-34 fires beside CHK-33.
 			name: "a space scene is present but the GL renderer is not configured",
 			mutate: func(t *testing.T, root string) map[string]string {
 				path := filepath.Join(root, "src", "scenes", "Title.tsx")
 				writeFile(t, path, spaceSceneSource)
 				return nil
 			},
-			wantFail: []string{"CHK-33"},
+			wantFail: []string{"CHK-33", "CHK-34"},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

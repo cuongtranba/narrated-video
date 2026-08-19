@@ -157,6 +157,68 @@ func TestRequired_UnionsTheKindsInUse(t *testing.T) {
 	}
 }
 
+// The invariant that ties scaffolding to detection: a scene written the way its
+// own template writes it must read back as that kind. It did not — the templates
+// import the wrapper, because CHK-36 and CHK-37 forbid importing the packages
+// directly, and detection only looked for the packages. So every correctly
+// written flow and space scene read back as text, and CHK-34 stopped asking
+// whether their packages were installed at all.
+func TestOf_ATemplateIsDetectedAsItsOwnKind(t *testing.T) {
+	for _, kind := range All() {
+		if got := Of(templateSource(t, kind)).Name; got != kind.Name {
+			t.Errorf("the %q template reads back as kind %q", kind.Name, got)
+		}
+	}
+}
+
+// The mark of a compliant scene is the wrapper import, not the package import.
+func TestOf_RecognisesTheWrapperImport(t *testing.T) {
+	for _, tc := range []struct {
+		name, source, want string
+	}{
+		{"space through the wrapper", `import { Space } from "../components/space"`, Space},
+		{"flow through the wrapper", `import { Diagram } from "../components/diagram"`, Flow},
+		{
+			// Still detected, so CHK-34 keeps naming the packages a
+			// rule-breaking scene needs while CHK-37 reports the bypass.
+			"space by a direct package import",
+			`import { Mesh } from "three"`,
+			Space,
+		},
+		{
+			// A component whose path merely begins with a wrapper's.
+			"a path that only resembles the wrapper",
+			`import { Space } from "../components/space-filler"`,
+			Text,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := Of(tc.source).Name; got != tc.want {
+				t.Fatalf("Of() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A scene may draw a diagram inside a 3D stage. Installing only the first kind's
+// packages would leave the other's import unresolved at bundle time — the same
+// silence this change is about, one level down.
+func TestRequired_UnionsEveryKindOneSceneDrawsOn(t *testing.T) {
+	required := Required(map[string]string{
+		"Hybrid": `import { Diagram } from "../components/diagram"` + "\n" +
+			`import { Space } from "../components/space"`,
+	})
+
+	var names []string
+	for _, dep := range required {
+		names = append(names, dep.Name)
+	}
+	want := "@react-three/fiber,@remotion/three,@xyflow/react,three"
+	if strings.Join(names, ",") != want {
+		t.Fatalf("Required() = %v, want every package both wrappers need (%s)", names, want)
+	}
+}
+
 // The kit's shipped reference cut must include at least one scene that uses the
 // Diagram component. Templates are excluded — a template that demonstrates what
 // to fill in is not the same as an example that demonstrates the vocabulary.
