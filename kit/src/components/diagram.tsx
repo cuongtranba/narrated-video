@@ -14,6 +14,7 @@ import { useCurrentFrame } from "remotion"
 
 import { Trace } from "./motion"
 import { HAIRLINE, RADIUS, Reveal, SIZE } from "./primitives"
+import { walkSchedule } from "../motion-math"
 import { THEME } from "../generated/theme"
 
 export type DiagramNode = {
@@ -45,32 +46,17 @@ export type DiagramReveal = {
 
 const MUTED_NODE_OPACITY = 0.35
 
-type RevealWindow = { at: number; until: number }
-
-type WalkSchedule = {
-  nodeReveal: Map<string, RevealWindow>
-  edgeReveal: Map<string, RevealWindow>
-}
-
-const buildWalkSchedule = (graph: DiagramGraph, reveal: DiagramReveal): WalkSchedule => {
-  const walkOrder = graph.order ?? graph.nodes.map(node => node.id)
-  const totalItems = graph.nodes.length + graph.edges.length
-  const step = Math.max(1, Math.floor((reveal.through - reveal.at) / (totalItems + 1)))
-
-  const nodeReveal = new Map<string, RevealWindow>()
-  walkOrder.forEach((id, i) => {
-    const at = reveal.at + i * step
-    nodeReveal.set(id, { at, until: at + step })
-  })
-
-  const edgeReveal = new Map<string, RevealWindow>()
-  for (const edge of graph.edges) {
-    const at = reveal.at + (walkOrder.indexOf(edge.source) + 1) * step
-    edgeReveal.set(edge.id, { at, until: at + step })
-  }
-
-  return { nodeReveal, edgeReveal }
-}
+/**
+ * The walk's frame math lives in `motion-math.ts` with the rest of it, where it
+ * is tested without React Flow, a DOM or a renderer.
+ */
+const buildWalkSchedule = (graph: DiagramGraph, reveal: DiagramReveal) =>
+  walkSchedule(
+    graph.order ?? graph.nodes.map(node => node.id),
+    graph.edges,
+    reveal.at,
+    reveal.through,
+  )
 
 type KitNodeData = {
   label: string
@@ -173,8 +159,8 @@ export const Diagram: React.FC<{
           type: "kit" as const,
           data: {
             label: node.data.label,
-            revealAt: schedule.nodeReveal.get(node.id)?.at,
-            revealUntil: schedule.nodeReveal.get(node.id)?.until,
+            revealAt: schedule.nodes.get(node.id)?.at,
+            revealUntil: schedule.nodes.get(node.id)?.until,
             hasSubject: subject !== undefined,
             isSubject: node.id === subject,
           },
@@ -187,8 +173,8 @@ export const Diagram: React.FC<{
         ...edge,
         type: "kit" as const,
         data: {
-          revealAt: schedule.edgeReveal.get(edge.id)?.at,
-          revealUntil: schedule.edgeReveal.get(edge.id)?.until,
+          revealAt: schedule.edges.get(edge.id)?.at,
+          revealUntil: schedule.edges.get(edge.id)?.until,
         },
       }))
     : graph.edges
