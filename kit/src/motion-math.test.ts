@@ -5,6 +5,7 @@ import {
   FOCUS_DURATION,
   focusTransform,
   staggerOffset,
+  walkSchedule,
 } from "./motion-math"
 
 describe("staggerOffset", () => {
@@ -98,5 +99,60 @@ describe("focusTransform", () => {
     for (let f = 0; f <= 10 + FOCUS_DURATION; f++) {
       expect(focusTransform(f, 10, on).scale).toBeGreaterThanOrEqual(1)
     }
+  })
+})
+
+describe("walkSchedule", () => {
+  const NODES = ["a", "b", "c"]
+  const EDGES = [
+    { id: "a-b", source: "a" },
+    { id: "b-c", source: "b" },
+  ]
+
+  test("nodes enter in walk order, one step apart, starting at the at cue", () => {
+    const { nodes } = walkSchedule(NODES, EDGES, 0, 60)
+    // 5 items + 1 => step 10
+    expect(nodes.get("a")?.at).toBe(0)
+    expect(nodes.get("b")?.at).toBe(10)
+    expect(nodes.get("c")?.at).toBe(20)
+  })
+
+  test("a node NEVER carries an until — Reveal reads until as a fade-out", () => {
+    // The regression this covers: nodes were scheduled `until: at + step`, so
+    // every box faded out one step after arriving and the finished diagram was
+    // a row of edges pointing at nothing. `subject` (hold one node, dim the
+    // rest) is only meaningful if nodes persist.
+    const { nodes } = walkSchedule(NODES, EDGES, 0, 60)
+    for (const id of NODES) {
+      expect(nodes.get(id)?.until).toBeUndefined()
+    }
+  })
+
+  test("an edge carries a finite until — Trace reads until as stroke-complete", () => {
+    const { edges } = walkSchedule(NODES, EDGES, 0, 60)
+    for (const edge of EDGES) {
+      const window = edges.get(edge.id)
+      expect(window?.until).toBeGreaterThan(window?.at ?? 0)
+    }
+  })
+
+  test("an edge is anchored after its source node has entered", () => {
+    const { nodes, edges } = walkSchedule(NODES, EDGES, 0, 60)
+    for (const edge of EDGES) {
+      expect(edges.get(edge.id)?.at).toBeGreaterThan(nodes.get(edge.source)?.at ?? 0)
+    }
+  })
+
+  test("step is at least 1 even when the window is shorter than the item count", () => {
+    const { nodes } = walkSchedule(NODES, EDGES, 0, 1)
+    expect(nodes.get("b")?.at).toBe(1)
+    expect(nodes.get("c")?.at).toBe(2)
+  })
+
+  test("determinism: same arguments always yield the same schedule", () => {
+    const first = walkSchedule(NODES, EDGES, 5, 90)
+    const second = walkSchedule(NODES, EDGES, 5, 90)
+    expect([...first.nodes]).toEqual([...second.nodes])
+    expect([...first.edges]).toEqual([...second.edges])
   })
 })
