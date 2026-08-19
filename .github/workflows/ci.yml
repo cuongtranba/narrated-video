@@ -220,7 +220,7 @@ jobs:
 
       - name: Upload both frames when renders differ
         if: failure() && steps.changed.outputs.run == 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nondeterministic-frames
           path: /tmp/det/out/still-*.png
