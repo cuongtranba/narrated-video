@@ -124,6 +124,26 @@ or was hand-edited — check `nv validate` for CHK-01 and run `nv sync`. Composi
 are derived from `LOCALES × TIMELINE`, so a locale missing from the generated
 timeline is a locale missing from the list.
 
+**"Remotion version mismatch: not all Remotion packages have the same version."**
+Two copies of `remotion` are installed, and they do not share React context — so
+hooks in whichever packages resolve to the second copy read from a renderer that
+is not the one producing frames. The render completes and **exits 0**; what comes
+out is wrong rather than missing, which is why this warning is worth stopping for.
+
+The cause is almost always a range where the rest of the family is pinned:
+`@remotion/three@4.0.513` depends on `remotion@4.0.513` *exactly*, so `^4.0.0`
+installs its own Remotion beside the pinned one. CHK-38 catches it in
+`package.json`; `bunx remotion versions` catches it in the resolved tree and,
+unlike `render`, exits 1.
+
+Fix: pin every `@remotion/*` package to the same exact version as `remotion` — no
+`^`, no `~` — then reinstall so the duplicate is dropped.
+
+```bash
+rm -rf node_modules && bun install
+bunx remotion versions          # "All packages have the correct version"
+```
+
 **A scene remounts every frame; animations restart; state resets.** A component
 identity was created inside a render function. Hoist it to module scope. See the
 identity trap section in `scene-registry.md`.

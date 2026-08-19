@@ -237,6 +237,28 @@ func TestChecks_MutationFailsExactlyItsOwnCheck(t *testing.T) {
 			wantFail: []string{"CHK-37"},
 		},
 		{
+			// A range on a Remotion package resolves to a second copy of
+			// Remotion beside the pinned one. Only CHK-38 sees it: the package
+			// is present, and at a version CHK-34 never asked about.
+			name: "a Remotion package drifts off the pinned version",
+			mutate: func(t *testing.T, root string) map[string]string {
+				writeFile(t, filepath.Join(root, "package.json"), `{
+  "private": true,
+  "scripts": {
+    "render": "remotion render Explainer out/explainer.mp4",
+    "still": "remotion still Explainer out/explainer.png"
+  },
+  "dependencies": {
+    "@remotion/transitions": "^4.0.0",
+    "remotion": "4.0.513"
+  }
+}
+`)
+				return nil
+			},
+			wantFail: []string{"CHK-38"},
+		},
+		{
 			name: "a diagram node is missing its declared dimensions",
 			mutate: func(t *testing.T, root string) map[string]string {
 				writeFile(t, filepath.Join(root, "src", "generated", "diagrams.ts"),
@@ -918,6 +940,108 @@ func TestGLRendererConfigured_PassesWhenBothConfigured(t *testing.T) {
 	r := glRendererConfigured(kit)
 	if !r.OK {
 		t.Fatalf("space scene with GL config failed CHK-33: %v", r.Findings)
+	}
+}
+
+// CHK-38. Remotion will not work across a version boundary: two copies in one
+// tree mean React context does not cross it. The failure mode that matters is
+// that `remotion compositions` prints a mismatch banner and still exits 0, so
+// only a check makes it visible.
+func TestRemotionFamilyPinned(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		body   string
+		wantOK bool
+	}{
+		{
+			name: "one exact version across both blocks",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "@remotion/cli": "4.0.513", "remotion": "4.0.513" },
+  "devDependencies": { "@remotion/eslint-config-flat": "4.0.513", "eslint": "10.8.1" }
+}`,
+			wantOK: true,
+		},
+		{
+			// The regression that started this: one range among eight pins.
+			name: "a caret on a Remotion package",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "@remotion/three": "^4.0.0", "remotion": "4.0.513" }
+}`,
+			wantOK: false,
+		},
+		{
+			name: "a tilde on a Remotion package",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "@remotion/three": "~4.0.513", "remotion": "4.0.513" }
+}`,
+			wantOK: false,
+		},
+		{
+			name: "an exact pin on a different version",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "@remotion/three": "4.0.512", "remotion": "4.0.513" }
+}`,
+			wantOK: false,
+		},
+		{
+			name: "a devDependency that drifted",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "remotion": "4.0.513" },
+  "devDependencies": { "@remotion/eslint-config-flat": "4.0.512" }
+}`,
+			wantOK: false,
+		},
+		{
+			// Ranges on packages outside the family are ordinary npm practice,
+			// and Dependabot manages them.
+			name: "carets on packages that are not Remotion's",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "@xyflow/react": "^12.11.3", "remotion": "4.0.513", "three": "^0.185.1" }
+}`,
+			wantOK: true,
+		},
+		{
+			// No devDependencies block at all — ordinary, not broken.
+			name:   "no dev block",
+			body:   basePackageJSON,
+			wantOK: true,
+		},
+		{
+			// Nothing to compare against; the family is whatever remotion is.
+			name: "no remotion dependency to anchor the family",
+			body: `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "dependencies": { "three": "^0.185.1" }
+}`,
+			wantOK: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			writeFile(t, filepath.Join(root, "package.json"), tc.body)
+
+			r := remotionFamilyPinned(&Kit{Project: &project.Project{Root: root}})
+			if r.OK != tc.wantOK {
+				t.Fatalf("OK=%v, want %v; findings: %v", r.OK, tc.wantOK, r.Findings)
+			}
+		})
+	}
+}
+
+// A package.json is the JavaScript project's, not nv's. One that is absent or
+// written in a shape nv cannot read is not a finding — the same stance CHK-34
+// takes, and for the same reason: a remedy that would not work is one readers
+// learn to skip.
+func TestRemotionFamilyPinned_PassesWhenThereIsNoPackageToRead(t *testing.T) {
+	r := remotionFamilyPinned(&Kit{Project: &project.Project{Root: t.TempDir()}})
+	if !r.OK {
+		t.Fatalf("a project with no package.json failed CHK-38: %v", r.Findings)
 	}
 }
 

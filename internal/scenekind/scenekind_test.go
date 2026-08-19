@@ -1,6 +1,7 @@
 package scenekind
 
 import (
+	"encoding/json"
 	"io/fs"
 	"regexp"
 	"strings"
@@ -180,6 +181,51 @@ func TestKit_ReferenceScenesDemonstrateFlowKind(t *testing.T) {
 		}
 	}
 	t.Error(`kit reference cut ships no scene using the Diagram component; add a flow scene to kit/src/scenes/`)
+}
+
+// The template is where every version now lives, so it is where a Remotion
+// package can drift away from the rest of its family — and Remotion will not
+// work across a version boundary. `@remotion/three@4.0.513` depends on
+// `remotion@4.0.513` exactly, so a range here installs a second copy of Remotion
+// beside the pinned one, and the render that follows is wrong rather than
+// broken. This is CHK-38 applied to the template itself, without a network
+// round-trip: Dependabot bumps the family in a batch, and a range is exactly
+// what its batch cannot hold.
+func TestTemplateVersions_EveryRemotionPackageIsOnOneExactVersion(t *testing.T) {
+	raw, err := kit.FS.ReadFile("package.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Read the file rather than templateVersions, which holds only the runtime
+	// dependencies: @remotion/eslint-config-flat is a devDependency, and a
+	// version boundary is one wherever it is declared.
+	var doc struct {
+		Dependencies    map[string]string `json:"dependencies"`
+		DevDependencies map[string]string `json:"devDependencies"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatal(err)
+	}
+
+	want := doc.Dependencies["remotion"]
+	if want == "" {
+		t.Fatal("kit/package.json installs no remotion")
+	}
+
+	for block, deps := range map[string]map[string]string{
+		"dependencies":    doc.Dependencies,
+		"devDependencies": doc.DevDependencies,
+	} {
+		for name, version := range deps {
+			if name != "remotion" && !strings.HasPrefix(name, "@remotion/") {
+				continue
+			}
+			if version != want {
+				t.Errorf("%s.%s is %q, want %q — every Remotion package must share one exact version",
+					block, name, version, want)
+			}
+		}
+	}
 }
 
 func templateSource(t *testing.T, kind Kind) string {

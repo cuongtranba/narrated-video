@@ -156,6 +156,50 @@ func TestDeps_ReadsWhatThePackageInstalls(t *testing.T) {
 	}
 }
 
+// CHK-38 judges the whole Remotion family, and one of them — the eslint config —
+// is a devDependency. The two blocks are read the same way; only the key differs.
+func TestDevDeps_ReadsTheDevBlockWithoutConfusingItForDependencies(t *testing.T) {
+	f, err := Load(writePackage(t, `{
+  "scripts": { "render": "remotion render Explainer out/x.mp4" },
+  "devDependencies": {
+    "@remotion/eslint-config-flat": "4.0.512",
+    "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "remotion": "4.0.512"
+  }
+}
+`))
+	if err != nil || f == nil {
+		t.Fatalf("Load() = %v, %v", f, err)
+	}
+
+	dev, ok := f.DevDeps()
+	if !ok {
+		t.Fatal("DevDeps() disowned a readable devDependencies object")
+	}
+	if dev["@remotion/eslint-config-flat"] != "4.0.512" || len(dev) != 2 {
+		t.Fatalf("DevDeps() = %v, want the two dev entries", dev)
+	}
+
+	deps, ok := f.Deps()
+	if !ok || deps["remotion"] != "4.0.512" || len(deps) != 1 {
+		t.Fatalf("Deps() = %v, %v; want just remotion — devDependencies must not be mistaken for it", deps, ok)
+	}
+}
+
+// A package.json with no dev block is ordinary, not broken. CHK-38 has to treat
+// it as "nothing to judge" rather than a finding.
+func TestDevDeps_DisownsAPackageWithNoDevDependencies(t *testing.T) {
+	f, err := Load(writePackage(t, kitPackageJSON))
+	if err != nil || f == nil {
+		t.Fatalf("Load() = %v, %v", f, err)
+	}
+	if dev, ok := f.DevDeps(); ok {
+		t.Fatalf("DevDeps() = %v, true; want false", dev)
+	}
+}
+
 func TestReconcileDepsAt_WritesOnlyWhenSomethingChanged(t *testing.T) {
 	root := writePackage(t, kitPackageJSON)
 	path := filepath.Join(root, FileName)

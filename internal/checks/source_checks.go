@@ -131,6 +131,75 @@ func pkgDepsMatchSceneKinds(kit *Kit) Result {
 	return fail(id, title, "run: nv sync", sortedFindings(findings))
 }
 
+// CHK-38. Remotion refuses to work across a version boundary: every one of its
+// packages reaches for the same React context, and two copies in one tree do not
+// share it. npm's own resolution is what puts them there — `@remotion/three@4.0.513`
+// depends on `remotion@4.0.513` exactly, so a single `^` beside an otherwise
+// pinned family installs a second Remotion underneath it.
+//
+// The reason this needs a check rather than a convention: `remotion render` and
+// `remotion compositions` print a mismatch banner and then **exit 0**. The video
+// is produced, the pipeline is green, and the frames are wrong — hooks read from
+// the copy that is not driving the render. Nothing downstream notices.
+//
+// CHK-34 cannot see this. It knows the three packages the scene kinds install and
+// judges each against what its kind declares; it has nothing to say about
+// @remotion/cli, fonts, media, transitions or the eslint config, and a family
+// that is uniformly wrong passes it. This check judges the family against itself.
+func remotionFamilyPinned(kit *Kit) Result {
+	const id, title = "CHK-38", "every Remotion package is on one exact version"
+
+	file, err := pkgscripts.Load(kit.Root)
+	if err != nil || file == nil {
+		return pass(id, title)
+	}
+	deps, readable := file.Deps()
+	if !readable {
+		return pass(id, title)
+	}
+
+	// remotion itself is the anchor. Without it there is no version for the rest
+	// of the family to be wrong about, and inventing one would put this check in
+	// disagreement with CHK-34 about what the project is meant to install.
+	pinned := deps["remotion"]
+	if pinned == "" {
+		return pass(id, title)
+	}
+
+	// A slice rather than a map: the order findings come out in is the order the
+	// blocks are listed here, with no sort to keep congruent with it. The dev
+	// block is optional — a project without one is ordinary, not broken — but
+	// what lives there, the eslint config, is still part of the family.
+	blocks := []struct {
+		where string
+		deps  map[string]string
+	}{{pkgscripts.FileName + " dependencies", deps}}
+	if dev, ok := file.DevDeps(); ok {
+		blocks = append(blocks, struct {
+			where string
+			deps  map[string]string
+		}{pkgscripts.FileName + " devDependencies", dev})
+	}
+
+	var findings []Finding
+	for _, block := range blocks {
+		for _, name := range sortedStringKeys(block.deps) {
+			if name != "remotion" && !strings.HasPrefix(name, "@remotion/") {
+				continue
+			}
+			if version := block.deps[name]; version != pinned {
+				findings = append(findings, Finding{
+					Where:  block.where,
+					Detail: fmt.Sprintf("%s is %q, but remotion is pinned to %q", name, version, pinned),
+				})
+			}
+		}
+	}
+	return fail(id, title,
+		"pin every @remotion/* package to the same exact version as remotion — a second copy breaks React context at render time and the render still exits 0",
+		sortedFindings(findings))
+}
+
 var wallClockPatterns = []struct {
 	re      *regexp.Regexp
 	call    string
