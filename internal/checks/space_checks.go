@@ -3,14 +3,12 @@ package checks
 import (
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/cuongtranba/narrated-video/internal/pkgscripts"
+	"github.com/cuongtranba/narrated-video/internal/remotionconfig"
 	"github.com/cuongtranba/narrated-video/internal/scenekind"
 )
-
-var glRendererRe = regexp.MustCompile(`setChromiumOpenGlRenderer\s*\(\s*["']angle["']`)
 
 // CHK-33. Headless Chromium does not enable a WebGL backend by default. A
 // space scene rendered without one produces a black rectangle at the correct
@@ -24,11 +22,11 @@ func glRendererConfigured(kit *Kit) Result {
 
 	var findings []Finding
 
-	configPath := filepath.Join(kit.Root, "remotion.config.ts")
+	configPath := filepath.Join(kit.Root, remotionconfig.FileName)
 	configContent, err := os.ReadFile(configPath)
-	if err != nil || !glRendererRe.Match(configContent) {
+	if err != nil || !remotionconfig.HasGLRenderer(configContent) {
 		findings = append(findings, Finding{
-			Where:  "remotion.config.ts",
+			Where:  remotionconfig.FileName,
 			Detail: `missing Config.setChromiumOpenGlRenderer("angle")`,
 		})
 	}
