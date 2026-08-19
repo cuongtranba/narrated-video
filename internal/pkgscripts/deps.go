@@ -8,13 +8,24 @@ import (
 	"github.com/cuongtranba/narrated-video/internal/scenekind"
 )
 
-const depsKey = "dependencies"
+const (
+	depsKey    = "dependencies"
+	devDepsKey = "devDependencies"
+)
 
 // Deps reports what package.json installs. The second result is false when the
 // document has no dependencies object this package can read confidently — the
 // same disowning the scripts get, so nv never rewrites a shape it guessed at.
-func (f *File) Deps() (map[string]string, bool) {
-	sp, _, ok := objectSpan(f.raw, depsKey)
+func (f *File) Deps() (map[string]string, bool) { return f.depsIn(depsKey) }
+
+// DevDeps reports the devDependencies block. Only CHK-38 reads it: the Remotion
+// family spans both blocks, and a copy on the wrong version is a mismatch
+// wherever it is declared. Nothing writes here — reconciliation stays on
+// dependencies, which is what keeps its remedy honest.
+func (f *File) DevDeps() (map[string]string, bool) { return f.depsIn(devDepsKey) }
+
+func (f *File) depsIn(key string) (map[string]string, bool) {
+	sp, _, ok := objectSpan(f.raw, key)
 	if !ok {
 		return nil, false
 	}

@@ -216,6 +216,11 @@ The component owns `ThreeCanvas` sizing, the transparent background, and default
 lighting — scenes do not touch any of those. **CHK-37** fails when a scene
 imports `@react-three/fiber`, `three`, or `@remotion/three` directly.
 
+`--kind space` installs `@remotion/three` at the exact version `remotion` is
+pinned to, never a range: it depends on its own release of `remotion` exactly, so
+a range installs a second copy of Remotion and the render silently uses the wrong
+one. **CHK-38** fails when the family falls out of step.
+
 ```tsx
 import { useCurrentFrame, interpolate } from "remotion"
 import { Space } from "../components/space"

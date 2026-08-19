@@ -1,4 +1,4 @@
-# The 37 checks
+# The 38 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -17,7 +17,7 @@ Remedies below are the exact strings the tool prints.
 - [Scene shape and timing: CHK-12, CHK-13, CHK-25, CHK-26](#scene-shape-and-timing)
 - [Fonts: CHK-18](#fonts)
 - [Provider and spend: CHK-19, CHK-20](#provider-and-spend)
-- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-33, CHK-34, CHK-36, CHK-37](#source-discipline)
+- [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-33, CHK-34, CHK-36 – CHK-38](#source-discipline)
 - [Assets: CHK-31, CHK-35](#assets)
 - [Diagrams: CHK-29, CHK-30](#diagrams)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
@@ -388,6 +388,56 @@ fixes, and nothing else moves. A `package.json` that is absent, unreadable, or h
 no `dependencies` object passes — it belongs to the JavaScript project, not to
 `nv`.
 
+### CHK-38 — every Remotion package is on one exact version
+
+Reads `package.json`, takes the version `remotion` is pinned to as the anchor, and
+fails when any `@remotion/*` package in `dependencies` or `devDependencies` is on
+a different one — including a range like `^4.0.0`, which is a different version
+the moment Remotion publishes again.
+
+Remedy: `pin every @remotion/* package to the same exact version as remotion — a
+second copy breaks React context at render time and the render still exits 0`
+
+Remotion will not work across a version boundary. Every one of its packages
+reaches for the same React context, and two copies in one `node_modules` do not
+share it. npm's ordinary resolution is what puts them there:
+`@remotion/three@4.0.513` depends on `remotion@4.0.513` *exactly*, so one `^`
+beside an otherwise pinned family installs a second Remotion underneath it.
+
+What makes this a check rather than a convention is the exit code. `remotion
+render` and `remotion compositions` detect the mismatch, print a banner about it,
+and **exit 0** — the video is produced, the pipeline is green, and the frames are
+wrong, because hooks read from the copy that is not driving the render.
+
+This is the check that CHK-34 cannot be. CHK-34 asks whether a project installs
+what its scene kinds need, at the version `kit/package.json` declares — so it has
+nothing to say about `@remotion/cli`, `fonts`, `google-fonts`, `media`,
+`transitions` or the eslint config, none of which any kind names. And because the
+template is the single source of those versions, a range *in the template* simply
+becomes the version CHK-34 asks for: it would compare `^4.0.0` against `^4.0.0`
+and pass. CHK-38 judges the family against itself instead, so the two do not
+overlap and neither can cover for the other.
+
+A range is also what Dependabot's batched bump cannot hold. It moves the exact
+pins together and leaves the range where it is, so the family splits on the first
+Remotion release after that range last resolved — silently, because the install
+still succeeds.
+
+The remedy is an edit to `package.json`, not `nv sync`. Reconciliation only
+manages the packages a scene kind in use requires, and most of the Remotion
+family is in the template regardless of what any scene imports — so `nv sync`
+would not fix this, and a remedy that names it would be one readers learn to
+skip. A `package.json` that is absent or unreadable passes, and so does one with
+no `remotion` dependency to anchor the family: there is no version for the rest
+to be wrong about, and inventing one would put this check in disagreement with
+CHK-34 about what the project is meant to install.
+
+`bunx remotion versions` is the same invariant checked one layer down — against
+what the resolver actually wrote to disk rather than what `package.json`
+declares, which also catches a transitive `@remotion/*` arriving on its own
+version. Unlike `render`, it exits 1 on a mismatch, and CI runs it after
+`bun install`.
+
 ### CHK-33 — space scenes have the GL renderer configured
 
 Reads every `src/scenes/<Id>.tsx` the config declares. If any scene imports the
@@ -515,7 +565,7 @@ least likely to notice.
 
 ## Reserved ids
 
-Check ids are permanent labels, not positions. This file lists 37 checks whose highest id is 37. An id is never reused either — one in a CI
+Check ids are permanent labels, not positions. This file lists 38 checks whose highest id is 38. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
 
 ## What is deliberately excluded

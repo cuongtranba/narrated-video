@@ -134,10 +134,17 @@ jobs:
       # binary, which would quietly check with the wrong one. The scripts name the
       # compiler explicitly. Linting is gated for the same reason: a lint chain that
       # cannot load its parser fails here rather than in a user's editor.
+      #
+      # `remotion versions` is the gate CHK-38 cannot be: the check reads what
+      # package.json declares, this reads what the resolver actually put on disk,
+      # so a transitive @remotion/* arriving on its own version is caught too. It
+      # exits 1 on a mismatch — unlike `render` and `compositions`, which print
+      # the same warning and exit 0.
       - name: The scaffolded project type-checks, lints, and its compositions resolve
         run: |
           cd /tmp/demo
           bun install
+          bunx remotion versions
           bun run typecheck
           bun run lint
           bunx remotion compositions src/index.ts
