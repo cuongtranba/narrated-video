@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -8,7 +9,25 @@ import (
 
 	"github.com/cuongtranba/narrated-video/internal/checks"
 	"github.com/cuongtranba/narrated-video/internal/project"
+	"github.com/cuongtranba/narrated-video/internal/scenekind"
 )
+
+// flowEntry is the package.json line a flow scene is expected to add, read from
+// the kind rather than spelled out, so a version bump in the template does not
+// need editing here to keep the test honest.
+func flowEntry(t *testing.T) string {
+	t.Helper()
+
+	kind, ok := scenekind.Lookup("flow")
+	if !ok {
+		t.Fatal("the flow kind is not in the registry")
+	}
+	deps := kind.Dependencies()
+	if len(deps) != 1 {
+		t.Fatalf("the flow kind declares %d packages, want exactly one", len(deps))
+	}
+	return fmt.Sprintf("%q: %q", deps[0].Name, deps[0].Version)
+}
 
 // The whole loop for a kind, end to end: scaffold it, break the half that lives
 // in package.json, and prove the remedy CHK-34 prints is the one that clears it.
@@ -25,7 +44,7 @@ func TestInit_KindInstallsItsDependencyAndSyncRestoresIt(t *testing.T) {
 	}
 
 	pkgPath := filepath.Join(root, "package.json")
-	if !strings.Contains(readFile(t, pkgPath), `"@xyflow/react": "^12.0.0"`) {
+	if !strings.Contains(readFile(t, pkgPath), flowEntry(t)) {
 		t.Fatalf("a flow scene did not install its dependency:\n%s", readFile(t, pkgPath))
 	}
 
@@ -38,7 +57,7 @@ func TestInit_KindInstallsItsDependencyAndSyncRestoresIt(t *testing.T) {
 		t.Fatalf("CHK-34 fails on a project nv itself scaffolded: %v", failing)
 	}
 
-	stripped := strings.Replace(readFile(t, pkgPath), `"@xyflow/react": "^12.0.0",`, "", 1)
+	stripped := strings.Replace(readFile(t, pkgPath), flowEntry(t)+",", "", 1)
 	writeString(t, pkgPath, stripped)
 	if failing := failingIDs(t, root); !contains(failing, "CHK-34") {
 		t.Fatalf("failing checks = %v, want CHK-34 once the dependency was removed", failing)

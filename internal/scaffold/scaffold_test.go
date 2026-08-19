@@ -224,7 +224,7 @@ func TestAddScene_ScaffoldsTheKindItWasAskedFor(t *testing.T) {
 			}
 
 			installed := dependencies(t, root)
-			for _, dep := range kind.Dependencies {
+			for _, dep := range kind.Dependencies() {
 				if installed[dep.Name] != dep.Version {
 					t.Errorf("package.json has %s = %q, want %q", dep.Name, installed[dep.Name], dep.Version)
 				}

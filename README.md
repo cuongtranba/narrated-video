@@ -155,7 +155,8 @@ internal/checks/            the 37 checks
 internal/pipeline/          nv status — the checks projected onto the running order
 internal/script/            nv script — the readable script, rendered from content/
 internal/pkgscripts/        package.json — the composition id and the scene-kind deps
-internal/scenekind/         text | flow | space: template, dependencies, inference
+internal/scenekind/         text | flow | space: template, packages, inference
+                            (versions are read from kit/package.json, never repeated)
 internal/scaffold/          nv init
 internal/schema/            video.schema.json
 kit/                        //go:embed — the Remotion project template
