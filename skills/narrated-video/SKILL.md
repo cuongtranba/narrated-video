@@ -185,3 +185,8 @@ something shipped wrong; `references/validate-checks.md` says what, per check.
 `bun run typecheck` and `bun run lint` cover what the gate deliberately does not:
 the gate answers questions about the project's data, TypeScript answers questions
 about its code.
+
+Run both through `bun run`, never `bunx tsc`. The project installs TypeScript 7
+for checking and TypeScript 6 for the lint chain — typescript-eslint cannot load
+against the 7.0 API yet — and a bare `tsc` resolves to the 6.0 binary. The
+scripts name the right compiler; `kit/README.md` explains why there are two.

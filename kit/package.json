@@ -7,29 +7,33 @@
     "studio": "remotion studio",
     "render": "remotion render Explainer out/explainer.mp4",
     "still": "remotion still Explainer out/explainer.png",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "node ./node_modules/typescript-native/bin/tsc --noEmit",
     "lint": "eslint src",
     "test": "bun test"
   },
   "dependencies": {
-    "@react-three/fiber": "^9.0.0",
-    "@remotion/cli": "4.0.512",
-    "@remotion/fonts": "4.0.512",
-    "@remotion/google-fonts": "4.0.512",
-    "@remotion/media": "4.0.512",
+    "@react-three/fiber": "^9.7.0",
+    "@remotion/cli": "4.0.513",
+    "@remotion/fonts": "4.0.513",
+    "@remotion/google-fonts": "4.0.513",
+    "@remotion/media": "4.0.513",
     "@remotion/three": "^4.0.0",
-    "@remotion/transitions": "4.0.512",
-    "@xyflow/react": "^12.0.0",
+    "@remotion/transitions": "4.0.513",
+    "@xyflow/react": "^12.11.3",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "remotion": "4.0.512",
-    "three": "^0.175.0"
+    "remotion": "4.0.513",
+    "three": "^0.185.1"
   },
   "devDependencies": {
-    "@remotion/eslint-config-flat": "4.0.512",
-    "@types/react": "19.2.7",
-    "@types/web": "0.0.166",
-    "eslint": "9.19.0",
-    "typescript": "5.9.3"
+    "@remotion/eslint-config-flat": "4.0.513",
+    "@types/react": "19.2.18",
+    "@types/web": "0.0.354",
+    "eslint": "10.8.1",
+    "typescript": "6.0.3",
+    "typescript-native": "npm:typescript@7.0.2"
+  },
+  "overrides": {
+    "typescript-eslint": "8.67.0"
   }
 }
