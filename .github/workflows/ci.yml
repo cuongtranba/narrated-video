@@ -36,14 +36,22 @@ jobs:
     needs: [test]
     permissions:
       contents: write
+    env:
+      # Whether this run can push a rebuilt binary back — which decides both how it
+      # authenticates and what it checks out. Fork and Dependabot runs cannot read
+      # repository secrets, so RELEASE_PLEASE_TOKEN is empty for them, and a fork's
+      # head branch does not exist in this repository to be checked out at all.
+      PUSHABLE: ${{ github.event.pull_request.head.repo.fork != true && github.actor != 'dependabot[bot]' }}
     steps:
-      # Check out the actual branch head (not the detached merge commit that the
-      # default PR checkout produces) so we can push back to it when needed.
+      # When the run can push, check out the branch head rather than the detached
+      # merge commit the default PR checkout produces, so the push has somewhere to
+      # land. Otherwise take that default, with the run's own read-only token: its
+      # history still carries the commit dates the staleness check reads.
       - uses: actions/checkout@v7.0.1
         with:
-          token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+          token: ${{ secrets.RELEASE_PLEASE_TOKEN || github.token }}
           fetch-depth: 0
-          ref: ${{ github.head_ref || github.ref_name }}
+          ref: ${{ env.PUSHABLE == 'true' && (github.head_ref || github.ref_name) || '' }}
 
       - name: Check whether binaries need rebuilding
         id: check
@@ -64,10 +72,7 @@ jobs:
           fi
 
       - name: Fail when CI cannot push stale binaries back
-        if: |
-          steps.check.outputs.needed == 'true' &&
-          (github.event.pull_request.head.repo.fork == true ||
-           github.actor == 'dependabot[bot]')
+        if: steps.check.outputs.needed == 'true' && env.PUSHABLE != 'true'
         run: |
           echo "::error::Binaries are stale and CI cannot push to this branch (fork or Dependabot PR). Run 'make binaries', commit the result, and push."
           git log --oneline -3 -- cmd internal kit go.mod go.sum

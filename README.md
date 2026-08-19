@@ -180,9 +180,15 @@ make check    # gofmt -l, go vet, go test
 
 CI rebuilds `skills/narrated-video/bin/` automatically whenever `cmd/`,
 `internal/`, `kit/`, `go.mod`, or `go.sum` change and commits the result —
-so contributors do not need to run `make binaries` locally. `make binaries`
-remains available as a local debug command when you need to inspect a
-cross-compiled binary without waiting for CI.
+so contributors working in this repository do not need to run `make binaries`
+locally. `make binaries` remains available as a local debug command when you
+want to inspect a cross-compiled binary without waiting for CI.
+
+Pushing that rebuild back needs a token no fork or Dependabot run can read, so
+those PRs get the check without the fix: CI compares the two commit dates and,
+only when the binaries are genuinely behind the source, fails asking you to run
+`make binaries` and commit the result yourself. A fork PR that leaves `cmd/`,
+`internal/`, `kit/`, `go.mod`, and `go.sum` alone never has to.
 
 Built `CGO_ENABLED=0 -trimpath -ldflags="-s -w"`, which with a pinned toolchain is
 byte-reproducible. The binaries carry **no version stamp**, deliberately: writing one
