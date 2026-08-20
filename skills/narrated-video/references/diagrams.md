@@ -61,8 +61,47 @@ const graph: DiagramGraph = {
 | `name` | `string` | Name passed to the Remotion interactive element inspector |
 | `graph` | `DiagramGraph` | Nodes and edges; nodes must declare `width` and `height` |
 | `viewport` | `{ x, y, zoom }` | Static viewport; never auto-derived (no `fitView`) |
-| `reveal` | `{ at, through }` | Optional. Animates the walk — nodes `Stagger` in, edges `Trace` in, in walk order. Omit for the static render above. |
+| `reveal` | `{ at, through }` | Optional. Animates the walk — nodes `Reveal` in and stay, edges `Trace` in, in walk order. Omit for the static render above. |
 | `subject` | `string` | Optional. A node id to hold as the visual subject once the walk has started — every other node dims to `0.35` opacity. |
+| `flow` | `boolean \| { cycleFrames?, packets? }` | Optional. Runs packets along each edge once it has finished drawing. `cycleFrames` (default 45) is how long one packet takes to cross an edge; `packets` (default 2) is how many are in flight. |
+
+## Flowing edges
+
+A traced edge says two things are connected. A flowing edge says the connection
+**carries**, which way, and how continuously — the difference between a topology
+and a dataflow, and usually the thing the narration is actually about.
+
+```tsx
+<Diagram
+  name="RequestPath"
+  graph={graph}
+  viewport={{ x: 150, y: 148, zoom: 1 }}
+  reveal={{ at: at(CUE.walk, durationInFrames), through: at(CUE.walked, durationInFrames) }}
+  flow={{ cycleFrames: 34, packets: 2 }}
+/>
+```
+
+Flow begins where each edge's stroke completes, so a packet never appears on a
+line the viewer has not watched being drawn. With no `reveal`, flow starts at
+frame 0 and the graph is static-but-carrying.
+
+Set an edge's `flowing: false` for a connection that exists but does not carry —
+a fallback path, a cache miss that rarely happens, a control link among data
+links. This is what makes the moving edges mean something: if everything flows,
+flow is just decoration.
+
+```ts
+edges: data.edges.map(edge => ({ ...edge, flowing: edge.id !== "router-origin" })),
+```
+
+Under the hood this is `<Flow>` from `components/motion`, which animates
+`stroke-dashoffset` against `pathLength={1}`. Nothing is measured from the DOM,
+so the animation is identical in every capture tab — the same reason `Trace`
+works headless. `flowDash` in `motion-math.ts` is the pure function, and it is
+unit-tested for continuity and for staying inside one dash period.
+
+Slower and fewer reads as deliberate traffic; faster and more reads as load. Two
+packets at 34 frames is a good default for a four-hop path at 30fps.
 
 ## Walk order
 
@@ -80,13 +119,51 @@ because there is no topological order to fall back to. `internal/gen/walk_order.
 is the Go implementation of that derivation, used wherever `diagrams.ts` is
 generated rather than hand-written.
 
-## Edge ordering
+## Never translate a node
 
-An edge's reveal is anchored to its source node's position in the walk, not to its
-own position in `graph.edges`: an edge traces in only after its source node has
-entered, and finishes tracing before the walk reaches whatever comes after it. This
-is what makes the animation read as a walk rather than a simultaneous unveiling —
-the viewer never sees an edge pointing at a node that has not appeared yet.
+`<Diagram>` fades nodes in with `rise={0}` — no movement — and that is a
+correctness rule, not a taste one.
+
+React Flow measures handle positions from the DOM and **caches** them. A node
+that slides into place is, at the moment it is measured, displaced by `rise`.
+The cached anchor keeps that displacement for the rest of the scene, so every
+edge hangs below its node by `rise x zoom`.
+
+What made it survive several rounds of fixing is that **it never appears in a
+still**. `remotion still` renders one settled frame and measures the true
+position. `remotion render` walks frames from zero, measures during the
+entrance, and caches the wrong anchor for everything after. So the stills were
+right and the video was wrong, and every check passed.
+
+The lesson generalises past this component: for anything whose layout is
+*measured* rather than declared, verify a frame extracted from the rendered
+mp4, not a still.
+
+## The walk schedule
+
+`buildWalkSchedule` in `kit/src/motion-math.ts` divides `through - at` into one
+step per node plus one per edge, and hands out two different kinds of cue:
+
+- **A node gets an entrance frame and no exit.** It enters on its step and stays
+  for the rest of the scene. The walk accumulates, which is the whole point — and
+  it is what makes `subject` meaningful, since dimming every node but one requires
+  the others to still be there.
+- **An edge gets a span**, `{at, until}`, across which `Trace` draws its stroke.
+  `until` here is the stroke completing, not the edge leaving.
+
+The distinction is load-bearing because the two components read `until`
+oppositely: on `Reveal` it is an exit (`opacity` returns to 0 over `until → until
++ 10`), on `Trace` it is completion. Feeding a node's `Reveal` the end of its walk
+step faded every box out one step after it arrived, so a four-node build-up
+rendered as an empty panel with stranded strokes — at exit 0, with all 42 checks
+passing, because the gate reads no pixels. `motion-math.test.ts` now pins both
+shapes.
+
+An edge is anchored to `max(sourceSlot + 1, targetSlot)` — it traces only once
+**both** boxes it joins are on screen. Anchoring to the source alone is correct on
+a chain and wrong the moment the graph forks or joins: on the kit's own
+`config + content → sync → generated` graph, the `config → sync` stroke reached
+into empty canvas a full step before `sync` arrived.
 
 ### What is fixed inside the component and cannot be overridden by a caller
 

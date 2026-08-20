@@ -1,4 +1,4 @@
-# The 38 checks
+# The 42 checks
 
 Answers: what each check reads, when it fails, and what to do about it.
 
@@ -20,6 +20,8 @@ Remedies below are the exact strings the tool prints.
 - [Source discipline: CHK-21 – CHK-24, CHK-27, CHK-32, CHK-33, CHK-34, CHK-36 – CHK-38](#source-discipline)
 - [Assets: CHK-31, CHK-35](#assets)
 - [Diagrams: CHK-29, CHK-30](#diagrams)
+- [Contrast and colour: CHK-39, CHK-40](#contrast-and-colour)
+- [Design consistency: CHK-41, CHK-42](#design-consistency)
 - [What is deliberately excluded](#what-is-deliberately-excluded)
 
 ## Generation and config
@@ -594,8 +596,94 @@ least likely to notice.
 
 ## Reserved ids
 
-Check ids are permanent labels, not positions. This file lists 38 checks whose highest id is 38. An id is never reused either — one in a CI
+Check ids are permanent labels, not positions. This file lists 42 checks whose highest id is 38. An id is never reused either — one in a CI
 log or an old issue has to keep meaning the single thing it always meant.
+
+## Contrast and colour
+
+### CHK-39 — text colours meet WCAG AA contrast against what they sit on
+
+Reads `theme` in `video.config.yaml`, converts each colour out of OKLCH into
+linear sRGB, and scores the pairs the components actually composite:
+
+| Pair | Where it lands |
+| --- | --- |
+| `foreground` on `background` | Stage headings and body copy |
+| `muted` on `background` | secondary paragraphs on the Stage |
+| `foreground` on `surface` | Card copy and Diagram node labels |
+| `muted` on `surface` | `Mono`, and captions inside a Card |
+
+Fails below **4.5:1** (WCAG 2.2 SC 1.4.3). Large text is allowed 3:1 by the
+spec, but a theme key does not know what size it will be set at, so the palette
+is held to the stricter figure.
+
+Remedy: `raise the lightness gap between the pair named above — see references/ui-consistency.md`
+
+Contrast is the one accessibility property a video cannot recover from. There is
+no zoom, no reader mode, no user stylesheet, and no way to ask the frame again.
+It is also invisible to every other check here: a palette with 2:1 body text
+renders perfectly, exits 0, and is unreadable on a laptop in daylight.
+
+### CHK-40 — accent meets WCAG contrast for the information it carries
+
+Same source, scoring `accent` against `background` and against `surface`, and
+failing below **3:1** (SC 1.4.11).
+
+Remedy: `raise the accent's lightness against the surface named above, or darken that surface`
+
+The accent is not decoration: it is the `Rule` that marks where the voice
+starts, the underline under the term being defined, and the stroke of every
+diagram edge. Below 3:1 that information is gone for a viewer with low vision,
+and gone for everyone on a washed-out projector.
+
+**What both checks skip.** A pair is scored only when both keys are declared.
+`theme` is optional and a project may set three keys and let the components'
+defaults cover the rest, so an absent colour is a choice rather than a fault —
+and inventing a value to score against would report a contrast the render does
+not have. An unreadable colour string is a finding, never a silent zero.
+
+`border` is deliberately not scored. It is a decorative hairline at 1.2:1
+against `surface` in the shipped theme, and holding a hairline to 3:1 would
+force every project to draw boxes it did not ask for. Where a boundary carries
+meaning — a Diagram node — the component sets its own border rather than
+relying on the token.
+
+## Design consistency
+
+These two carry the design floor in `references/ui-consistency.md` as machinery
+rather than advice. They ship compiled into `nv`, so they hold on a consumer's
+machine with no skill loaded and no model in the loop.
+
+### CHK-41 — scene modules take colour from the theme, never a literal
+
+Scans `src/scenes/*.tsx` for `#rrggbb`, `rgb()`, `hsl()` and hand-written
+`oklch()`. Comments are stripped first; string bodies are **not**, because a
+colour literal almost always lives inside quotes.
+
+Remedy: `add the colour to theme in video.config.yaml and read it from THEME — a literal is unreachable by a theme change and unscorable by CHK-39`
+
+One accent doing one job is what makes eight scenes read as one video. A colour
+written into a scene is a colour the palette does not know about: a theme change
+cannot reach it, and **CHK-39 cannot score it**, because the contrast gate reads
+`theme` and a literal is not in it. Two scenes each reaching for "roughly the
+same green" is how a cut starts looking like two videos.
+
+`color-mix(in oklch, …)` over theme tokens passes — it still sources from the
+theme. Interpolating `${THEME.accent}` into a template string passes for the
+same reason.
+
+### CHK-42 — scene modules size type from the shared scale
+
+Flags `fontSize: 46` and `fontSize={72}` in a scene. `SIZE.lead` passes, and so
+does arithmetic on a step (`SIZE.body * 0.9`) — it still references the scale.
+
+Remedy: `size type with SIZE from ../components/primitives; if no step fits, the scale is what should change`
+
+A type scale is what stops six scenes arriving at six slightly different heading
+sizes. At 1080p the gap between 44 and 46 is invisible in review and obvious in
+a cut. Other numeric styles — `gap`, `maxWidth`, `lineHeight` — are none of this
+check's business; scenes legitimately carry a dozen of those each, and hunting
+them would be a false-positive machine.
 
 ## What is deliberately excluded
 
