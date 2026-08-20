@@ -3,7 +3,7 @@ import { Easing, Interactive, interpolate, useCurrentFrame } from "remotion"
 
 import { tabular } from "../fonts"
 import type { FocusOn } from "../motion-math"
-import { countValue, focusTransform, staggerOffset } from "../motion-math"
+import { countValue, flowDash, focusTransform, staggerOffset } from "../motion-math"
 import { THEME } from "../generated/theme"
 import { EASE_OUT, Reveal } from "./primitives"
 
@@ -60,6 +60,66 @@ export const Trace: React.FC<{
           fill="none"
           strokeLinecap="round"
           strokeLinejoin="round"
+        />
+      </svg>
+    </Interactive.Div>
+  )
+}
+
+/**
+ * Something travelling an edge, on a loop — a request, a record, a packet.
+ *
+ * `Trace` says the connection exists; `Flow` says it is carrying. Pair them on
+ * the same `d` and the edge draws itself in, then starts moving.
+ */
+export const Flow: React.FC<{
+  name: string
+  d: string
+  at?: number
+  /** Frames for one packet to cross the whole path. */
+  cycleFrames?: number
+  packets?: number
+  /**
+   * `dashes` marches the whole edge, the way an animated React Flow edge reads —
+   * best when the point is that traffic is continuous. `packets` sends a couple
+   * of discrete blips, for when the point is the individual message.
+   */
+  mode?: "dashes" | "packets"
+  stroke?: string
+  strokeWidth?: number
+  style?: React.CSSProperties
+}> = ({
+  name,
+  d,
+  at = 0,
+  cycleFrames = 45,
+  packets,
+  mode = "dashes",
+  stroke = THEME.foreground,
+  strokeWidth = 4,
+  style,
+}) => {
+  const frame = useCurrentFrame()
+  const count = packets ?? (mode === "dashes" ? 9 : 2)
+  const duty = mode === "dashes" ? 0.55 : 0.38
+  const { dasharray, dashoffset } = flowDash(frame, at, cycleFrames, count, duty)
+
+  if (frame < at) {
+    return null
+  }
+
+  return (
+    <Interactive.Div name={name} style={{ position: "absolute", inset: 0, ...style }}>
+      <svg width="100%" height="100%" style={{ overflow: "visible" }}>
+        <path
+          d={d}
+          pathLength={1}
+          strokeDasharray={dasharray}
+          strokeDashoffset={dashoffset}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          fill="none"
+          strokeLinecap="round"
         />
       </svg>
     </Interactive.Div>

@@ -5,7 +5,9 @@ import { THEME } from "../generated/theme"
 import { at } from "../timing"
 import type { SceneComponent } from "./types"
 
-const CUE = { walk: 0.15 }
+// `walked` ends the build-up well before the scene does, so the finished graph
+// is on screen — and carrying — while the narration explains it.
+const CUE = { walk: 0.15, walked: 0.6 }
 
 const graph: DiagramGraph = {
   nodes: [
@@ -32,14 +34,16 @@ export const Scene: SceneComponent = ({ durationInFrames, leadFrames }) => (
     >
       <Rule at={leadFrames} width={520} color={THEME.accent} />
 
-      <div style={{ height: 620 }}>
-        <Diagram
+      <Diagram
           name="Pipeline"
           graph={graph}
-          viewport={{ x: 410, y: 274, zoom: 1 }}
-          reveal={{ at: at(CUE.walk, durationInFrames), through: durationInFrames }}
-        />
-      </div>
+          height={620}
+          reveal={{ at: at(CUE.walk, durationInFrames), through: at(CUE.walked, durationInFrames) }}
+          // Drop `flow` when the edges are relationships rather than traffic;
+          // keep it when something actually travels them, which is most of the
+          // time a pipeline is worth a scene. Per-edge: `flowing: false`.
+          flow
+      />
     </div>
   </Stage>
 )
