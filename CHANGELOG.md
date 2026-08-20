@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.0](https://github.com/cuongtranba/narrated-video/compare/v0.8.0...v0.9.0) (2026-08-20)
+
+
+### Features
+
+* flowing diagrams, a 3D object vocabulary, and a contrast gate ([#41](https://github.com/cuongtranba/narrated-video/issues/41)) ([49e6852](https://github.com/cuongtranba/narrated-video/commit/49e6852c57002703cb6c95473b87819e3d3d60e2))
+
+
+### Bug Fixes
+
+* **kit:** a diagram node no longer fades out one step after it arrives ([#39](https://github.com/cuongtranba/narrated-video/issues/39)) ([1bd0ec5](https://github.com/cuongtranba/narrated-video/commit/1bd0ec5db425af089f41a32bf23f92bffaf690d7))
+
 ## [0.8.0](https://github.com/cuongtranba/narrated-video/compare/v0.7.0...v0.8.0) (2026-08-19)
 
 
