@@ -10,10 +10,11 @@ length from measured audio, synthesizes narration, and gates the result with 42
 checks. The project it writes contains no build tooling of its own — a broken
 `node_modules` can change what renders, but it cannot change what the gate says.
 
-The gate is strict about everything it can read and silent about two things it
-cannot: **what the video shows**, and **what it looks like**. A project can pass
-all 42 checks and still be a stack of headings read aloud. Designing the cut and
-reading a frame are yours; both have a section below.
+The gate is strict about everything it can read and silent about three things it
+cannot: **whether what the video says is true**, **what it shows**, and **what it
+looks like**. A project can pass all 42 checks and still be a stack of headings
+read aloud, or a fluent, well-timed, confidently wrong one. Finding out what is
+true, designing the cut and reading a frame are yours; each has a section below.
 
 ## The loop
 
@@ -36,8 +37,10 @@ wrong. `--json` carries the same data with `.next.command` spelled out.
 | Task | Read | Start with |
 | --- | --- | --- |
 | Anything, at any point | — | `nv status` |
-| Turn a doc, feature or idea into a video | this file § Design the cut | decide the beats before touching a file |
-| New video from nothing | this file, then `references/config-schema.md` | `nv init <dir>` |
+| **Any new video, before anything else** | this file § The brief, `references/brief.md` | ask the seven questions; write `brief.md` |
+| Turn a doc, feature or idea into a video | this file § The brief, then § Design the cut | read the doc, then ask what it cannot tell you |
+| The narration reads as generic or hollow | `references/brief.md` | the two tests below; missing material, not weak wording |
+| New video from nothing | this file, then `references/config-schema.md` | `nv init <dir>` — after the brief |
 | Add a scene | `references/scene-registry.md` | `nv init --scene <Id> [--kind text\|flow\|space]` |
 | Make a scene carry its idea | `references/motion-vocabulary.md` | the beat/verb table below |
 | Add a language / translate | `references/localization.md`, `references/fonts.md` | `locales.list` + `content/<code>.yaml` |
@@ -52,7 +55,8 @@ wrong. `--json` carries the same data with `.next.command` spelled out.
 | Add a 3D scene | `references/3d.md` | `nv init --scene <Id> --kind space`, never use `useFrame` |
 | Adapt Three.js advice found elsewhere | `references/threejs-bridge.md` | check it against the determinism rules before copying |
 
-Also here: `references/timing-model.md` (why lengths are derived and how),
+Also here: `references/brief.md` (the interview, and what to do with a vague
+answer), `references/timing-model.md` (why lengths are derived and how),
 `references/tts-providers.md` (providers, models, the model that is wrong in a
 way you cannot hear from a 200), `references/ui-consistency.md` (the design
 floor and the contrast gate), `references/threejs-bridge.md` (which general
@@ -79,6 +83,159 @@ the root is found by walking up, like `git`.
 Flags are parsed by hand and an unrecognised one is ignored silently, so a
 misspelled `--jsonn` gets you human output and exit 0 rather than an error. Only
 `--scene` and `--kind` take a value; `--json` and `--force` are bare.
+
+## The brief
+
+Ask before you write. Not to be careful — because the interview is the last
+stage where a false sentence can still be caught. Downstream, nothing reads
+prose: the gate checks data, the renderer checks nothing, and a wrong sentence
+costs exactly as many frames as a right one. It arrives at the viewer sounding
+like the parts that are true.
+
+"Make a video about X" is the start of the conversation, not a specification.
+The gap between that request and a video is filled either by asking or by
+inferring, and inference has a characteristic output — grammatical, correctly
+paced, generic, and specific exactly where it should have hedged. So find out
+what is true first, and write it down.
+
+### Which thing is it?
+
+"Our new rate limiter" names a thing without identifying one. Before any of the
+questions below matter, settle which artifact the video is about, and treat that
+choice as the first line of the brief rather than a detail on the way to the
+real work.
+
+It earns that place by what it costs when it is wrong. A sentence taken from the
+wrong system is not a sentence to fix — every other sentence is wrong too, and
+none of them look it, because they all carry a real file and a real line number.
+It is the one error careful sourcing makes *harder* to see. Wrong subject is a
+rewrite, not an edit.
+
+So when the request names something you have to go find:
+
+- **Search on what the thing does, not on what the request called it.** A login
+  throttle is a rate limiter that the code calls `throttle`, and a search for
+  `rate limit` walks straight past it. Search the behaviour, the status code,
+  the error string, the library names it would have used if it used one.
+- **Name the runners-up.** If two candidates landed the same week, the second one
+  is the risk — and writing it down is what lets someone correct you in one line
+  instead of after eight scenes are cued.
+- **Say why you picked the one you picked** — and hold the rejection to the same
+  standard as the choice. Ruling a candidate out invents a difference just as
+  easily as describing one does, and it is the easier place to do it, because
+  nobody checks the thing the video is *not* about. Reject on an axis you
+  actually read, not on one that merely sounds distinguishing.
+
+When there is someone to ask, this is a single question and it costs nothing:
+*which one do you mean — X or Y?*
+
+### How to ask
+
+**Read first, so you can ask better.** The README, the ADR, the changelog, the
+code path, the issue thread where it was argued about. A question whose answer
+was in a file you could have opened spends their patience on your homework, and
+they start answering briefly — which is when the interview stops working. Read
+to make the questions sharp, never to skip them: what is on disk is the version
+that was true when someone last cared about the doc.
+
+**Ask in one batch, not one at a time.** Six or seven questions in a single pass
+is a conversation; six sequential turns is an interrogation. Where the harness
+offers a structured question tool, use it.
+
+**Push once on a vague answer.** This is the part that does the work and the part
+that gets skipped, because a vague answer feels like an answer. It is not: the
+gap gets filled downstream anyway, with a sentence in the right register and
+invented content, now indistinguishable from the sourced ones. Push with a
+request for a thing, not a rephrasing — "faster than what, on what input?" gets
+a number; "can you say more?" gets a longer vague answer.
+
+**Stop when the remaining unknowns would not change the cut.** Past that you are
+gathering material for a different video.
+
+### What to ask
+
+Seven questions, each earning its place by what its absence costs:
+
+| Ask | Because without it |
+| --- | --- |
+| Who is watching, and what do they do differently afterwards? | narration addresses nobody and hedges to cover everyone; the cut has no ending, because that *is* the ending |
+| What do they believe now that is wrong? | you inherit the source document's shape, which is reference order, which is a list. This is what makes it an argument rather than a table of contents |
+| If they keep one sentence, which one? | every beat weighs the same, and the closing beat is whatever was left over |
+| Which claims can you point at, and where? | impressions get stated as measurements |
+| What does it *not* do? | the video overclaims into the first question a viewer will ask — and limits are specific in a way capabilities are not |
+| What surprised you? | nothing in the cut could have come from anyone but the person who built it. This is the highest-yield question in the list |
+| What has to be *seen* rather than said? | the structural beats get written as paragraphs, and converting one later costs more than planning it |
+
+Sort every answer into **sourced** (there is an artifact — a benchmark, a log, a
+commit, a file) or **impression**. An impression is not disqualified; it is
+disqualified from being stated as a measurement. "It felt much faster" is honest
+narration. "About 40% faster" is not, unless someone measured it.
+
+### The rule the whole thing exists to enforce
+
+Every specific in the narration — a number, a name, a limit, a claim about how
+something behaves — comes from something they told you or something you read in
+a file you can name. There is no third source. When you need a specific and have
+neither, the options are ask, read, or cut the sentence. Writing a plausible one
+is the failure this section exists to prevent, and it is the only failure on the
+list that the viewer cannot detect.
+
+### When nobody can answer
+
+Sometimes there is no one to ask: a scheduled run, a queued job, a request from
+someone who has already closed the laptop. Ask anyway — but when the answers
+cannot come, understand what the failure mode is. It is not *stop*. It is
+*invent*, and it arrives looking like progress.
+
+Half the rule survives without a person in the room: **read**. Work from that
+half.
+
+- Draft only what reading can source, and cite where you read it.
+- Everything a person would have supplied goes in `## Open`, and nothing in
+  `## Open` becomes a claim. That is the discipline — not "flag it" but "it may
+  not be spoken".
+- **Open the brief by saying the interview did not happen.** A brief that reads
+  like the product of a conversation, and was not, is worse than no brief.
+- **A comment is not a caveat.** `[ASSUMED]` next to a line in the yaml is
+  invisible in the render: the video still says the number out loud, in the same
+  confident voice as the sourced ones. Either a sentence is sourced or it is not
+  in the cut — there is no third state that a viewer can hear.
+- The read-back in "Done means" stays open. A run finishing does not satisfy it.
+
+The narrow honest version — fewer claims, every one of them sourced — is a
+legitimate deliverable. A confident one assembled from inference is not, and no
+label anywhere in the repository makes it one.
+
+### Write it down
+
+`brief.md` at the project root, beside `video.config.yaml`, holding **facts and
+intent — never narration lines.** Narration lives in `content/<locale>.yaml`,
+for the same reason `nv script` generates the readable script rather than
+letting you keep one: two files holding the same sentences agree until the first
+edit. The brief holds what is true, the yaml holds what is said, and a reviewer
+reads one against the other — which only works while they are different
+documents.
+
+Give it back to them before you write narration. A brief they have not read is a
+brief you wrote, and the corrections come cheap now and expensive after eight
+scenes are cued to the sentences. `references/brief.md` has the template, the
+full question bank, the pushback patterns, and a worked example.
+
+### Two tests, per beat, before you write the line
+
+- **Cover the heading.** If the narration still carries information with the
+  heading hidden, the beat is doing work. If it is the heading in a full
+  sentence, the beat is decoration and the viewer has already read it.
+- **Could someone who has never used this thing have written this sentence?** If
+  yes, it came from the shape of the topic rather than from the thing, and it is
+  filler however fluent it reads. Cut it or replace it with something from the
+  brief.
+
+The second test is the one that catches "in today's fast-paced world",
+"seamlessly integrates" and "unlock the power of" — but it catches them as a
+symptom rather than a banned word list, which matters, because the register is
+endlessly re-inventable and the emptiness underneath it is what you are actually
+looking for.
 
 ## Design the cut before you write it
 
@@ -206,7 +363,7 @@ explaining them; CHK-22 rejects a numeric literal in that second argument.
 
 ```bash
 nv init my-video && cd my-video
-# wrote 30 files to my-video
+# wrote 39 files to my-video
 
 nv status        # ▸ voiceover — 0/2 scenes measured; next: nv voiceover
 nv voiceover     # provider `silence`: no API key, no network
@@ -427,8 +584,12 @@ Four failures no check covers, all of which render and exit 0:
    that looks finished is how a wrong cut escapes.
 3. You have looked at frames — at least the first word and one cue per scene — and
    what you saw is what the narration says.
-4. `bun run render` produces the file (`out/explainer.mp4` by default).
-5. `nv status` reports nothing outstanding.
+4. Every specific in the narration traces to `brief.md` or to a file you can
+   name, and the person who answered the questions has read the brief back. No
+   check can do this one; it is the only item on the list whose failure the
+   viewer will believe.
+5. `bun run render` produces the file (`out/explainer.mp4` by default).
+6. `nv status` reports nothing outstanding.
 
 `bun run typecheck` and `bun run lint` cover what the gate deliberately does not:
 the gate answers questions about the project's data, TypeScript answers questions

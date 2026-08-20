@@ -22,7 +22,7 @@ time.
 ## Quickstart
 
 ```bash
-nv init my-video && cd my-video     # wrote 30 files
+nv init my-video && cd my-video     # wrote 39 files
 nv status                           # ▸ voiceover — next: nv voiceover
 nv voiceover                        # provider `silence`: no API key, no network
 nv validate                         # exit 0 — "42 checks passed"
@@ -216,9 +216,15 @@ Windows is not supported in v1. macOS and Linux, arm64 and amd64.
 
 ## Documentation
 
-`skills/narrated-video/SKILL.md` routes; the detail lives in `references/`:
-`timing-model.md`, `scene-registry.md`, `tts-providers.md`, `localization.md`,
-`fonts.md`, `config-schema.md`, `validate-checks.md`, `troubleshooting.md`.
+`skills/narrated-video/SKILL.md` routes; the detail lives beside it in
+`references/`. The routing table at the top of SKILL.md is the index — listing
+the files here too would be a second index, and the one that goes stale, so a
+test asserts every reference is reachable from SKILL.md instead.
+
+One of them is worth naming here because it runs before the tool does:
+`references/brief.md`. The 42 checks read data, not prose, so nothing downstream
+can tell a sourced sentence from an invented one — the interview that fills
+`brief.md` is where that is settled, and it happens before `nv init`.
 
 ## License
 
