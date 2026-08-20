@@ -9,7 +9,9 @@
 package timing
 
 import (
+	"maps"
 	"math"
+	"slices"
 	"unicode/utf8"
 
 	"github.com/cuongtranba/narrated-video/internal/config"
@@ -61,6 +63,27 @@ type SceneTiming struct {
 	DurationInFrames int
 	Source           Source
 	HasAudio         bool
+
+	// Nil on a scene that belongs to no set, which is every scene in every
+	// project written before sets existed.
+	Set *SceneSet
+}
+
+// SceneSet is one scene's window onto a picture that several consecutive scenes
+// share. Each of them redraws the whole picture at OffsetFrames, and because
+// the picture is a pure function of that offset the two scenes either side of a
+// boundary draw identical pixels there — so the cross-fade between them
+// composites to those same pixels and the cut is not hidden but absent.
+//
+// Beats carries every beat's start, not this scene's index among them, and the
+// omission is the guarantee. A picture that mutated on "which beat am I" would
+// render its two neighbours differently at the one frame where they must agree,
+// and the seam would reappear precisely where the design claims it cannot.
+type SceneSet struct {
+	Name         string
+	OffsetFrames int
+	SpanFrames   int
+	Beats        []int
 }
 
 type LocaleTimeline struct {
@@ -84,6 +107,12 @@ type Input struct {
 	Narration        map[string]string
 	AudioPresent     func(sceneID string) bool
 	CharsPerSecond   float64
+	// Sets maps a set name to the scenes it holds. Membership is declared
+	// rather than inferred from imports, for the reason every other pairing in
+	// this project is declared: a run that is only implied has nothing to
+	// disagree with, so no check can catch the day a scene is inserted into
+	// the middle of one and splits it in two.
+	Sets map[string][]string
 }
 
 // Derive is the whole timing model: lead + narration + tail, with the
@@ -139,7 +168,71 @@ func Derive(in Input) LocaleTimeline {
 		total -= in.TransitionFrames * (n - 1)
 	}
 	out.TotalFrames = total
+	assignSets(out.Scenes, setNameByScene(in.Sets), in.TransitionFrames)
 	return out
+}
+
+// setNameByScene inverts the declaration. A scene named by two sets takes the
+// first in sorted order rather than whichever the map yielded, so a malformed
+// config still derives the same timeline on every machine; CHK-43 is what
+// refuses it.
+func setNameByScene(sets map[string][]string) map[string]string {
+	byScene := map[string]string{}
+	for _, name := range slices.Sorted(maps.Keys(sets)) {
+		for _, sceneID := range sets[name] {
+			if _, taken := byScene[sceneID]; !taken {
+				byScene[sceneID] = name
+			}
+		}
+	}
+	return byScene
+}
+
+// assignSets walks the running order and gives each run of consecutive scenes
+// sharing a set its own clock.
+//
+// The offset advances by the scene's duration minus the cross-fade, the same
+// repayment TotalFrames makes, because a transition overlaps its two
+// neighbours: during those frames both scenes are on screen, and only this
+// subtraction puts them on the same set frame. Advance by the raw duration and
+// every beat after the first draws the picture a transition too late, so it
+// jumps backwards at each boundary while every frame still renders.
+//
+// Scenes a set names out of order, or with a gap, form separate runs here. That
+// is deliberate: the arithmetic stays honest about what is actually adjacent on
+// screen, and CHK-43 reports the config that said otherwise.
+func assignSets(scenes []SceneTiming, setNameByScene map[string]string, transitionFrames int) {
+	for start := 0; start < len(scenes); {
+		name := setNameByScene[scenes[start].ID]
+		if name == "" {
+			start++
+			continue
+		}
+
+		end := start
+		for end < len(scenes) && setNameByScene[scenes[end].ID] == name {
+			end++
+		}
+		run := scenes[start:end]
+
+		beats := make([]int, len(run))
+		span := 0
+		for i := range run {
+			beats[i] = span
+			span += run[i].DurationInFrames - transitionFrames
+		}
+		span += transitionFrames
+
+		for i := range run {
+			run[i].Set = &SceneSet{
+				Name:         name,
+				OffsetFrames: beats[i],
+				SpanFrames:   span,
+				Beats:        beats,
+			}
+		}
+		start = end
+	}
 }
 
 func measured(m *Manifest, sceneID string) (ManifestEntry, bool) {

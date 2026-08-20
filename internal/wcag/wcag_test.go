@@ -3,6 +3,9 @@ package wcag
 import (
 	"math"
 	"testing"
+
+	"github.com/cuongtranba/narrated-video/internal/config"
+	"github.com/cuongtranba/narrated-video/kit"
 )
 
 func TestParseRejectsWhatItCannotRead(t *testing.T) {
@@ -39,15 +42,44 @@ func TestContrastIsSymmetricAndBoundedByOne(t *testing.T) {
 	}
 }
 
+// shippedTheme reads the palette out of the kit rather than restating it.
+//
+// A copy here drifted once already: this test went on scoring a red-hue palette
+// for the length of a redesign, while the kit shipped navy and teal and the
+// config claimed "every pair below is scored by CHK-39/40". A test named for the
+// shipped palette that scores a different one is worse than no test, because it
+// reports green for a question nobody is asking.
+func shippedTheme(t *testing.T) map[string]string {
+	t.Helper()
+	raw, err := kit.FS.ReadFile("video.config.yaml")
+	if err != nil {
+		t.Fatalf("read the kit's config: %v", err)
+	}
+	cfg, err := config.Parse(raw, "video.config.yaml")
+	if err != nil {
+		t.Fatalf("parse the kit's config: %v", err)
+	}
+	return cfg.Theme
+}
+
+// A pair naming a key the theme does not declare is scored by nothing:
+// contrastFindings skips any pair with a missing side, so the colour ships
+// unmeasured while the pair list implies it was checked. That is the same
+// silence as deleting a key to turn a check green.
+func TestEveryPairedKeyIsInTheShippedTheme(t *testing.T) {
+	theme := shippedTheme(t)
+	for _, pair := range append(append([]Pair{}, TextPairs...), NonTextPairs...) {
+		for _, key := range []string{pair.Foreground, pair.Background} {
+			if _, ok := theme[key]; !ok {
+				t.Errorf("%q is paired for %q but the shipped theme does not declare it", key, pair.Where)
+			}
+		}
+	}
+}
+
 // The palette nv ships must clear its own gate, or every fresh scaffold fails.
 func TestShippedThemeClearsItsOwnThresholds(t *testing.T) {
-	theme := map[string]string{
-		"background": "oklch(16% 0.01 13)",
-		"foreground": "oklch(98% 0.003 13)",
-		"muted":      "oklch(70% 0.012 13)",
-		"surface":    "oklch(23% 0.01 13)",
-		"accent":     "oklch(71.2% 0.194 13.428)",
-	}
+	theme := shippedTheme(t)
 	for _, pair := range TextPairs {
 		fg, err := Parse(theme[pair.Foreground])
 		if err != nil {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/cuongtranba/narrated-video/internal/config"
@@ -235,6 +236,143 @@ func TestAt(t *testing.T) {
 	} {
 		if got := At(tc.fraction, tc.duration); got != tc.want {
 			t.Errorf("At(%v, %d) = %d, want %d", tc.fraction, tc.duration, got, tc.want)
+		}
+	}
+}
+
+// threeBeats is one set held across three scenes, with lengths chosen so every
+// offset below is a different number and a transposed formula cannot pass.
+func threeBeats() Input {
+	return Input{
+		Locale:           "en",
+		FPS:              30,
+		TransitionFrames: 14,
+		Scenes: []config.Scene{
+			{ID: "Hook", DurationInFrames: 100},
+			{ID: "Plain", DurationInFrames: 200},
+			{ID: "Swap", DurationInFrames: 150},
+		},
+		Sets: map[string][]string{"Cafe": {"Hook", "Plain", "Swap"}},
+	}
+}
+
+// The offset advances by the scene's duration minus the cross-fade, the same
+// repayment TotalFrames makes. Advance by the raw duration instead and every
+// beat after the first draws the picture a transition too late, so it jumps
+// backwards at each boundary while every frame still renders.
+func TestDerive_SetOffsetsNetOutTheCrossFade(t *testing.T) {
+	got := Derive(threeBeats())
+
+	beats := []int{0, 86, 272}
+	for i, want := range []SceneSet{
+		{Name: "Cafe", OffsetFrames: 0, SpanFrames: 422, Beats: beats},
+		{Name: "Cafe", OffsetFrames: 86, SpanFrames: 422, Beats: beats},
+		{Name: "Cafe", OffsetFrames: 272, SpanFrames: 422, Beats: beats},
+	} {
+		scene := got.Scenes[i]
+		if scene.Set == nil {
+			t.Fatalf("%s: no set", scene.ID)
+		}
+		if scene.Set.Name != want.Name || scene.Set.OffsetFrames != want.OffsetFrames ||
+			scene.Set.SpanFrames != want.SpanFrames || !slices.Equal(scene.Set.Beats, want.Beats) {
+			t.Errorf("%s: set = %+v, want %+v", scene.ID, *scene.Set, want)
+		}
+	}
+}
+
+// This is the property the whole feature rests on, and it is asserted rather
+// than reasoned about because the formula is the sort of thing someone later
+// simplifies.
+//
+// During a transition both scenes are on screen: the outgoing one is on its
+// frame d−T+k while the incoming one is on frame k. Their set-relative frames
+// must be equal for every k in the overlap, because that is what makes the two
+// pictures identical and the cross-fade between them a no-op. If this fails,
+// the seam is visible and no other test in this package notices.
+func TestDerive_TheOverlapMapsToOneSetFrame(t *testing.T) {
+	in := threeBeats()
+	got := Derive(in)
+
+	for i := 0; i < len(got.Scenes)-1; i++ {
+		outgoing, incoming := got.Scenes[i], got.Scenes[i+1]
+		for k := 0; k < in.TransitionFrames; k++ {
+			leaving := outgoing.Set.OffsetFrames + outgoing.DurationInFrames - in.TransitionFrames + k
+			arriving := incoming.Set.OffsetFrames + k
+			if leaving != arriving {
+				t.Fatalf("overlap frame %d of %s→%s: set frames %d and %d disagree",
+					k, outgoing.ID, incoming.ID, leaving, arriving)
+			}
+		}
+	}
+}
+
+// The last beat's offset plus its duration is the run's whole length, so a set
+// animating towards a final state reaches it exactly as the run ends rather
+// than before or after.
+func TestDerive_ASetRunEndsExactlyWhereItsSpanSays(t *testing.T) {
+	got := Derive(threeBeats())
+
+	last := got.Scenes[len(got.Scenes)-1]
+	if end := last.Set.OffsetFrames + last.DurationInFrames; end != last.Set.SpanFrames {
+		t.Errorf("run ends at %d but span says %d", end, last.Set.SpanFrames)
+	}
+}
+
+// A set naming scenes that are not adjacent describes something the running
+// order cannot show. The arithmetic stays honest about what is actually on
+// screen together — two runs, each restarting at 0 — and CHK-43 is what reports
+// the config that said otherwise.
+func TestDerive_ScenesASetNamesOutOfOrderBecomeSeparateRuns(t *testing.T) {
+	got := Derive(Input{
+		Locale:           "en",
+		FPS:              30,
+		TransitionFrames: 14,
+		Scenes: []config.Scene{
+			{ID: "Hook", DurationInFrames: 100},
+			{ID: "Aside", DurationInFrames: 200},
+			{ID: "Return", DurationInFrames: 150},
+		},
+		Sets: map[string][]string{"Cafe": {"Hook", "Return"}},
+	})
+
+	if got.Scenes[1].Set != nil {
+		t.Errorf("Aside is in no set, got %+v", *got.Scenes[1].Set)
+	}
+	for _, i := range []int{0, 2} {
+		if scene := got.Scenes[i]; scene.Set.OffsetFrames != 0 || len(scene.Set.Beats) != 1 {
+			t.Errorf("%s: set = %+v, want a run of one starting at 0", scene.ID, *scene.Set)
+		}
+	}
+}
+
+// Every project written before sets existed passes no Sets at all, and must
+// still derive a timeline rather than panic.
+func TestDerive_WithoutSetsLeavesSceneSetNil(t *testing.T) {
+	got := Derive(Input{
+		Locale: "en", FPS: 30, TransitionFrames: 14,
+		Scenes: []config.Scene{{ID: "Title", DurationInFrames: 100}},
+	})
+
+	if got.Scenes[0].Set != nil {
+		t.Errorf("set = %+v, want nil", *got.Scenes[0].Set)
+	}
+}
+
+// A scene named by two sets is a config CHK-43 refuses, but Derive still runs
+// on it — status and validate both derive a timeline before any check reads it.
+// Map iteration order would make that timeline differ between runs, and a
+// generated file compared byte-for-byte against a fresh derivation would then
+// fail at random rather than for a reason.
+func TestDerive_ASceneNamedByTwoSetsResolvesTheSameEveryTime(t *testing.T) {
+	in := Input{
+		Locale: "en", FPS: 30, TransitionFrames: 14,
+		Scenes: []config.Scene{{ID: "Hook", DurationInFrames: 100}},
+		Sets:   map[string][]string{"Zulu": {"Hook"}, "Alpha": {"Hook"}},
+	}
+
+	for range 20 {
+		if name := Derive(in).Scenes[0].Set.Name; name != "Alpha" {
+			t.Fatalf("set = %q, want the first in sorted order", name)
 		}
 	}
 }
