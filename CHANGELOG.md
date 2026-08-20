@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/cuongtranba/narrated-video/compare/v0.9.0...v0.10.0) (2026-08-20)
+
+
+### Features
+
+* **skill:** interview before writing narration ([#42](https://github.com/cuongtranba/narrated-video/issues/42)) ([cc4f281](https://github.com/cuongtranba/narrated-video/commit/cc4f2815c4c8fd445ddcb1660c3b3dbfe6dfedd1))
+
 ## [0.9.0](https://github.com/cuongtranba/narrated-video/compare/v0.8.0...v0.9.0) (2026-08-20)
 
 
