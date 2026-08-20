@@ -98,6 +98,10 @@ func All() []Check {
 		glRendererConfigured,
 		assetExistsInPublic,
 		scenesHoldFrameOnAssetLoad,
+		themeTextContrast,
+		themeAccentContrast,
+		scenesUseThemeColours,
+		scenesUseTypeScale,
 	}
 }
 

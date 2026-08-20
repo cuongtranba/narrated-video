@@ -1,6 +1,6 @@
 # Motion vocabulary
 
-Five animation primitives in `kit/src/components/motion.tsx` that go beyond the
+Six animation primitives in `kit/src/components/motion.tsx` that go beyond the
 single entrance `Reveal` provides. Each is a pure function of `useCurrentFrame()`;
 none runs its own timer or observes the DOM.
 
@@ -59,6 +59,36 @@ On a diagram edge, `d` comes from React Flow's `getBezierPath` (`sourceX`,
 in a custom edge's `EdgeProps`), and `at`/`until` come from the diagram's walk
 schedule rather than a hand-picked cue. `<Diagram reveal={{ at, through }}>` wires
 this up itself; see `references/diagrams.md`.
+
+## Flow
+
+Packets run along a path, on a loop, for as long as the scene lasts.
+
+```tsx
+<Flow name="Ingest" d={pathData} at={at(CUE.traffic, durationInFrames)} cycleFrames={34} packets={2} />
+```
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `name` | `string` | — | Studio label |
+| `d` | `string` | — | SVG path data |
+| `at` | `number` | `0` | Frame the flow starts; renders nothing before it |
+| `cycleFrames` | `number` | `45` | Frames for one packet to cross the whole path |
+| `packets` | `number` | `2` | How many are in flight, evenly spaced |
+| `stroke` | `string` | `THEME.foreground` | Packet colour — deliberately not the accent, so packets read against an accent-coloured edge |
+| `strokeWidth` | `number` | `4` | |
+
+`Trace` says the connection exists; `Flow` says it carries. They compose on the
+same `d`: trace the edge in, then let it flow. That is exactly what
+`<Diagram flow>` does per edge — see `references/diagrams.md`.
+
+Like `Trace`, it animates `stroke-dashoffset` against `pathLength={1}`, so no DOM
+measurement is involved and every capture tab agrees. The pure function is
+`flowDash` in `motion-math.ts`, unit-tested for continuity across the wrap.
+
+Not for: a one-off gesture (that is `Trace`), or a value changing (that is
+`Count`). A flow that never stops implies traffic that never stops — for a single
+request, trace it once instead.
 
 ## Focus
 

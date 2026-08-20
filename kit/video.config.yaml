@@ -52,12 +52,15 @@ fonts:
 # an approximation of it. Colour only: the type scale and the safe area are
 # layout decisions the components own.
 theme:
-  background: oklch(16% 0.01 13)
-  foreground: oklch(98% 0.003 13)
-  muted: oklch(70% 0.012 13)
-  surface: oklch(23% 0.01 13)
-  border: oklch(29% 0.008 13)
-  accent: oklch(71.2% 0.194 13.428)
+  # Deep navy rather than neutral black: a slight hue in the dark end gives the
+  # accent something to sit against, so a teal reads as chosen rather than as
+  # the only colour that survived. Every pair below is scored by CHK-39/40.
+  background: oklch(13% 0.018 250)
+  foreground: oklch(97% 0.006 250)
+  muted: oklch(74% 0.02 235)
+  surface: oklch(20% 0.024 250)
+  border: oklch(31% 0.022 250)
+  accent: oklch(80% 0.135 172)
 
 defaults:
   # Silence at the head, and the frame the <Audio> mounts at. Wider than the
