@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/cuongtranba/narrated-video/compare/v0.10.0...v0.11.0) (2026-08-21)
+
+
+### Features
+
+* **timing:** set-relative offsets, and a palette test that scores the shipped palette ([#44](https://github.com/cuongtranba/narrated-video/issues/44)) ([3a45ebc](https://github.com/cuongtranba/narrated-video/commit/3a45ebc1863366b9c194ad39daee00f7a9843eae))
+
 ## [0.10.0](https://github.com/cuongtranba/narrated-video/compare/v0.9.0...v0.10.0) (2026-08-20)
 
 
