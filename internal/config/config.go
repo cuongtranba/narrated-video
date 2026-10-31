@@ -148,8 +148,12 @@ type TTS struct {
 }
 
 type Voice struct {
-	VoiceID string `yaml:"voiceId"`
-	Model   string `yaml:"model"`
+	// Provider overrides tts.provider for this locale. Empty means the
+	// project-wide one: use ProviderFor rather than reading either field, so
+	// every caller resolves a locale's provider the same way.
+	Provider string `yaml:"provider"`
+	VoiceID  string `yaml:"voiceId"`
+	Model    string `yaml:"model"`
 	// Absent means: send no voice_settings field at all. Settings tuned against
 	// one model are not tuning for another, and a model that wants none will
 	// quietly degrade if handed a neighbour's.
@@ -324,6 +328,17 @@ func (c *Config) LocaleByCode(code string) (Locale, bool) {
 func (c *Config) DefaultLocale() Locale {
 	l, _ := c.LocaleByCode(c.Locales.Default)
 	return l
+}
+
+// ProviderFor is the provider that voices a locale: its own override when the
+// voice names one, otherwise the project-wide tts.provider. A project may voice
+// one language with a hosted model and another with a local one, and the checks
+// must judge each locale's model against the provider that will really speak it.
+func (c *Config) ProviderFor(locale string) string {
+	if voice, ok := c.TTS.Voices[locale]; ok && voice.Provider != "" {
+		return voice.Provider
+	}
+	return c.TTS.Provider
 }
 
 func (c *Config) LocaleCodes() []string {

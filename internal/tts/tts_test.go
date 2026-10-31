@@ -457,7 +457,7 @@ func TestRegistry(t *testing.T) {
 	for _, p := range All() {
 		got = append(got, p.ID())
 	}
-	want := []string{elevenLabsID, sayID, silenceID}
+	want := []string{elevenLabsID, sayID, silenceID, vieneuID}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("All() = %v, want %v (sorted by id)", got, want)
 	}

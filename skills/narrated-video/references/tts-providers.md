@@ -6,7 +6,8 @@ unlisted model is refused, and how the key stays out of the repo.
 ## Contents
 
 - [The interface](#the-interface)
-- [The three bundled providers](#the-three-bundled-providers)
+- [The four bundled providers](#the-four-bundled-providers)
+- [One provider per locale](#one-provider-per-locale)
 - [Model policy](#model-policy)
 - [Correction: the remotion-best-practices skill is wrong here](#correction-the-remotion-best-practices-skill-is-wrong-here)
 - [The key](#the-key)
@@ -39,13 +40,14 @@ video — every scene length, every fraction cue, the composition's
 Audio is published through a temp file plus a rename, so a measured file is never
 a partial one. A truncated read would silently shorten a scene.
 
-## The three bundled providers
+## The four bundled providers
 
 | provider | deterministic | committable | role |
 | --- | --- | --- | --- |
 | `elevenlabs` | no | yes | production |
 | `silence` | **yes** | yes | **CI and no-key default** |
 | `say` (macOS) | no | **no** | hear local pacing only |
+| `vieneu` | no | yes | free local Vietnamese voice |
 
 **`silence`** writes a valid CBR MP3 by repeating one pre-encoded silent frame
 (418 bytes: `FF FB 92 C0` then zeros — MPEG-1 Layer III, 128 kbps, 44100 Hz,
@@ -66,6 +68,51 @@ to let `say` output ship.
 with `xi-api-key`. Non-deterministic: the same text resynthesized returns
 different bytes and a different length, which is exactly why the frame table is
 re-derived from measurement on every run rather than maintained.
+
+**`vieneu`** is [VieNeu-TTS](https://github.com/pnnbao97/VieNeu-TTS) (Apache-2.0), a
+Vietnamese model that runs on the CPU: free, offline, nothing leaves the machine.
+It has no command-line synthesizer, so `nv` runs a small Python helper embedded in
+the binary with the interpreter named by **`NV_VIENEU_PYTHON`** — the path to a
+Python that has the `vieneu` package installed. The variable is needed only by
+`nv voiceover`; `nv validate` and `nv status` work without it, because they read
+what was already synthesized. Output is encoded to a 44.1 kHz, 128 kbps mp3 with
+`ffmpeg` (or `lame`) and measured like every other provider's.
+
+- `voiceId` is a VieNeu preset voice name, or the path to a reference clip to
+  clone (`.wav`, `.mp3`, `.flac`, `.m4a`; relative paths resolve from the project
+  root).
+- Bracketed tags are removed from the line before it is spoken, except `[cười]`,
+  `[thở dài]` and `[hắng giọng]`, which VieNeu performs. Anything else in brackets
+  would be read aloud.
+- Each scene loads the model afresh, so expect a few seconds of start-up per line.
+- Only the `v3turbo` model is cleared, for `vi` only (see below). It is not
+  deterministic: it samples, so a line differs in length from run to run, which is
+  the reason timing is measured from the written bytes.
+
+## One provider per locale
+
+`tts.provider` is the project-wide default. A voice may override it, which is how a
+project voices English with a hosted model and Vietnamese with a local one:
+
+```yaml
+tts:
+  provider: elevenlabs
+  apiKeyEnv: ELEVENLABS_API_KEY
+  costCapUsd: 2.0
+  voices:
+    en:
+      voiceId: SAz9YHcvj6GT2YYXdXww
+      model: eleven_multilingual_v2
+    vi:
+      provider: vieneu                 # overrides tts.provider for vi only
+      voiceId: assets/narrator.wav     # a clip to clone, or a preset voice name
+      model: v3turbo
+```
+
+Every check resolves a locale's provider the same way — its own `provider`, else
+`tts.provider` — so CHK-04 judges `v3turbo` against VieNeu's policy rather than
+ElevenLabs', and CHK-20 and `nv status` price each locale at its own provider's
+rate. A project with no per-locale `provider` behaves as it always did.
 
 ## Model policy
 
@@ -95,8 +142,11 @@ correct HTTP status, plausible duration, plausible waveform, wrong language. The
 allow-list is the *only* record that a human listened.
 
 Adding a language therefore means: synthesize one line, **listen to it with
-someone who speaks the language**, and then add the model to `Allow` in
-`internal/tts/elevenlabs.go`. Not the other way round.
+someone who speaks the language**, and then add the model to `Allow` in the
+provider's file (`internal/tts/elevenlabs.go`, `internal/tts/vieneu.go`), with a
+comment recording who cleared it, when, and with which voice. Not the other way
+round. `vieneu` / `v3turbo` for `vi` was cleared this way: by ear, by a native
+speaker, with a cloned narrator voice, on 2026-10-31.
 
 `voiceSettings` is omitted from the request entirely when absent from the config,
 never defaulted. Settings tuned against one model mistune another, and the models
@@ -224,8 +274,10 @@ One file in `internal/tts/`, one row in the registry map, one section here.
 Checklist:
 
 - `Deterministic()` and `Committable()` are separate questions. `silence` is both;
-  `elevenlabs` is committable and not deterministic; `say` is neither.
+  `elevenlabs` and `vieneu` are committable and not deterministic; `say` is
+  neither.
 - `Policy()` — if output does not vary by model, clear everything with
   `Allow: {"*": {"*"}}`. Otherwise list only what an ear has cleared.
 - `Synthesize` writes `r.OutPath` via `writeOutput` and returns no duration.
-- `RequiredEnv()` returns variable **names**.
+- `RequiredEnv()` returns variable **names**. Check them when synthesizing, never
+  in `nv validate`.

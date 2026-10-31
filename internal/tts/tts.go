@@ -32,6 +32,9 @@ type Request struct {
 
 	CharsPerSecond float64 // offline providers only
 
+	// ProjectRoot resolves a voiceId that is a relative path to a reference clip.
+	ProjectRoot string
+
 	APIKey string // never logged, never persisted
 }
 
@@ -107,6 +110,7 @@ var registry = map[string]Provider{
 	elevenLabsID: newElevenLabs(),
 	silenceID:    silence{},
 	sayID:        say{},
+	vieneuID:     vieneu{},
 }
 
 // Get returns the provider registered under id.

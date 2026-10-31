@@ -49,7 +49,7 @@ func (s say) Synthesize(ctx context.Context, r Request) error {
 	if err != nil {
 		return fmt.Errorf("tts: %s: `say` not found on PATH: %w", s.ID(), err)
 	}
-	encoder, err := findEncoder()
+	encoder, err := findEncoder(s.ID())
 	if err != nil {
 		return err
 	}
@@ -86,15 +86,21 @@ type encoder struct {
 	name string
 	bin  string
 	args func(in, out string) []string
+	// cbr44k encodes at 44.1 kHz and 128 kbps, the format the other providers
+	// produce, for sources that arrive at some other rate.
+	cbr44k func(in, out string) []string
 }
 
-func findEncoder() (encoder, error) {
+func findEncoder(providerID string) (encoder, error) {
 	if bin, err := exec.LookPath("ffmpeg"); err == nil {
 		return encoder{
 			name: "ffmpeg",
 			bin:  bin,
 			args: func(in, out string) []string {
 				return []string{"-nostdin", "-loglevel", "error", "-y", "-i", in, "-codec:a", "libmp3lame", "-q:a", "2", out}
+			},
+			cbr44k: func(in, out string) []string {
+				return []string{"-nostdin", "-loglevel", "error", "-y", "-i", in, "-ar", "44100", "-codec:a", "libmp3lame", "-b:a", "128k", out}
 			},
 		}, nil
 	}
@@ -103,10 +109,13 @@ func findEncoder() (encoder, error) {
 			name: "lame",
 			bin:  bin,
 			args: func(in, out string) []string { return []string{"--quiet", in, out} },
+			cbr44k: func(in, out string) []string {
+				return []string{"--quiet", "--resample", "44.1", "-b", "128", in, out}
+			},
 		}, nil
 	}
 	return encoder{}, fmt.Errorf(
-		"tts: %s: needs an mp3 encoder on PATH, found neither ffmpeg nor lame (try `brew install ffmpeg`)", sayID)
+		"tts: %s: needs an mp3 encoder on PATH, found neither ffmpeg nor lame (try `brew install ffmpeg`)", providerID)
 }
 
 // run reports the tool's own stderr, which is the only useful part of a failed

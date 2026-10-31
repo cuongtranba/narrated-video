@@ -203,7 +203,7 @@
       "additionalProperties": false,
       "required": ["provider", "costCapUsd", "voices"],
       "properties": {
-        "provider": { "enum": ["elevenlabs", "silence", "say"] },
+        "provider": { "$ref": "#/$defs/ttsProvider" },
         "apiKeyEnv": {
           "type": "string",
           "pattern": "^[A-Z][A-Z0-9_]*$",
@@ -223,6 +223,10 @@
             "additionalProperties": false,
             "required": ["voiceId", "model"],
             "properties": {
+              "provider": {
+                "$ref": "#/$defs/ttsProvider",
+                "description": "Overrides tts.provider for this locale — e.g. English on elevenlabs, Vietnamese on a local vieneu. Absent means the project-wide provider."
+              },
               "voiceId": { "type": "string", "minLength": 1 },
               "model": {
                 "type": "string",
@@ -291,6 +295,7 @@
   },
 
   "$defs": {
+    "ttsProvider": { "enum": ["elevenlabs", "silence", "say", "vieneu"] },
     "localeCode": { "type": "string", "pattern": "^[a-z]{2}(-[A-Za-z0-9]+)*$" },
     "sceneId": { "type": "string", "pattern": "^[A-Z][A-Za-z0-9]*$" }
   }

@@ -35,22 +35,29 @@ type Options struct {
 }
 
 func Run(ctx context.Context, p *project.Project, opts Options, out io.Writer) error {
-	provider, err := tts.Get(p.Config.TTS.Provider)
-	if err != nil {
-		return err
-	}
-
 	locales, err := resolveLocales(p, opts.Locales)
 	if err != nil {
 		return err
 	}
 
-	if err := checkSpend(p, provider, locales, opts.Force, out); err != nil {
+	// Every locale's provider is resolved before the first request: an unknown
+	// one found halfway through would leave some locales re-synthesized and
+	// others not.
+	providers := map[string]tts.Provider{}
+	for _, locale := range locales {
+		provider, err := tts.Get(p.Config.ProviderFor(locale.Code))
+		if err != nil {
+			return fmt.Errorf("%s: %w", locale.Code, err)
+		}
+		providers[locale.Code] = provider
+	}
+
+	if err := checkSpend(p, locales, opts.Force, out); err != nil {
 		return err
 	}
 
 	for _, locale := range locales {
-		if err := synthesizeLocale(ctx, p, provider, locale, opts.APIKey, out); err != nil {
+		if err := synthesizeLocale(ctx, p, providers[locale.Code], locale, opts.APIKey, out); err != nil {
 			return fmt.Errorf("%s: %w", locale.Code, err)
 		}
 	}
@@ -76,10 +83,18 @@ func resolveLocales(p *project.Project, requested []string) ([]config.Locale, er
 // Exported so `nv status` quotes the same number `nv voiceover` will enforce:
 // two implementations of a price would eventually disagree, and the one the
 // operator read is not the one that bills.
-func EstimateSpend(p *project.Project, provider tts.Provider, locales []config.Locale) (int, float64) {
+//
+// Each locale is priced by its own provider, so a project that voices English
+// with a hosted model and Vietnamese with a free local one is quoted for the
+// English alone.
+func EstimateSpend(p *project.Project, locales []config.Locale) (int, float64, error) {
 	characters := 0
 	estimate := 0.0
 	for _, locale := range locales {
+		provider, err := tts.Get(p.Config.ProviderFor(locale.Code))
+		if err != nil {
+			return 0, 0, fmt.Errorf("%s: %w", locale.Code, err)
+		}
 		voice := p.Config.TTS.Voices[locale.Code]
 		for _, sceneID := range p.NarratedScenes() {
 			line := p.Content[locale.Code].Narration[sceneID]
@@ -87,14 +102,17 @@ func EstimateSpend(p *project.Project, provider tts.Provider, locales []config.L
 			estimate += float64(len([]rune(line))) / 1000 * provider.PricePer1kChars(voice.Model)
 		}
 	}
-	return characters, estimate
+	return characters, estimate, nil
 }
 
 // checkSpend estimates before the first request rather than after the last.
 // Synthesis is billed per character and a loop over locales multiplies it
 // quietly; the ceiling is the config's, so it is reviewed with everything else.
-func checkSpend(p *project.Project, provider tts.Provider, locales []config.Locale, force bool, out io.Writer) error {
-	characters, estimate := EstimateSpend(p, provider, locales)
+func checkSpend(p *project.Project, locales []config.Locale, force bool, out io.Writer) error {
+	characters, estimate, err := EstimateSpend(p, locales)
+	if err != nil {
+		return err
+	}
 
 	fmt.Fprintf(out, "%d characters across %d locale(s), estimated $%.2f (cap $%.2f)\n",
 		characters, len(locales), estimate, p.Config.TTS.CostCapUSD)
@@ -147,6 +165,7 @@ func synthesizeLocale(ctx context.Context, p *project.Project, provider tts.Prov
 			VoiceSettings:  voice.VoiceSettings,
 			OutputFormat:   p.Config.TTS.OutputFormat,
 			CharsPerSecond: locale.CharsPerSecond,
+			ProjectRoot:    p.Root,
 			APIKey:         apiKey,
 		})
 		if err != nil {

@@ -159,7 +159,7 @@ frame count.
 
 | field | type | default | notes |
 | --- | --- | --- | --- |
-| `provider` | `elevenlabs` \| `silence` \| `say` | required | See `tts-providers.md`. |
+| `provider` | `elevenlabs` \| `silence` \| `say` \| `vieneu` | required | The default for every locale. See `tts-providers.md`. |
 | `apiKeyEnv` | `^[A-Z][A-Z0-9_]*$` | — | Env var **NAME**. Never the key itself — CHK-03 refuses a literal, in this file and in every tracked file. |
 | `costCapUsd` | number > 0 | required | `nv voiceover` estimates before the first request and refuses above this; CHK-20 checks the same arithmetic at validate time. |
 | `outputFormat` | string | `"mp3_44100_128"` | |
@@ -169,7 +169,8 @@ Each voice:
 
 | field | type | notes |
 | --- | --- | --- |
-| `voiceId` | non-empty string | required |
+| `provider` | same values as `tts.provider` | Optional. Overrides `tts.provider` for this locale only, so English can use `elevenlabs` while Vietnamese uses `vieneu`. CHK-04 judges the locale's model against this provider, and CHK-20 prices it at this provider's rate. |
+| `voiceId` | non-empty string | required. For `vieneu` it is a preset voice name, or the path of a reference clip (`.wav`, `.mp3`, `.flac`, `.m4a`) to clone; a relative path is read from the project root. |
 | `model` | non-empty string | required. **Load-bearing per locale**: `eleven_multilingual_v2` speaks Vietnamese with wrong tones and still returns 200. `nv` refuses a denied *or unlisted* model. |
 | `voiceSettings` | map of string → number | Omit **entirely** for a model that does not want it. Settings tuned for one model are not tuning for another, and the models cleared for Vietnamese were cleared with none. |
 

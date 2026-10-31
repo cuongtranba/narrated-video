@@ -680,6 +680,79 @@ func TestChecks_UnlistedModelIsRefused(t *testing.T) {
 	}
 }
 
+// mixedProviderProject is a project whose English is voiced by the project-wide
+// provider and whose Vietnamese is voiced by a local VieNeu. The fixture is
+// synthesized with silence, then the Vietnamese take is relabelled as VieNeu's,
+// so the test needs neither Python nor a model: the checks only read what the
+// config and the manifest say.
+func mixedProviderProject(t *testing.T, viModel string) string {
+	t.Helper()
+	root := buildPassingProject(t)
+
+	config := filepath.Join(root, "video.config.yaml")
+	body := read(t, config)
+	body = strings.Replace(body, "  provider: silence", "  provider: elevenlabs", 1)
+	body = strings.Replace(body,
+		"      voiceId: v-vi\n      model: eleven_turbo_v2_5",
+		"      provider: vieneu\n      voiceId: v-vi\n      model: "+viModel, 1)
+	writeFile(t, config, body)
+
+	manifest := filepath.Join(root, "public", "voiceover", "vi", "manifest.json")
+	recorded := strings.ReplaceAll(read(t, manifest), `"provider": "silence"`, `"provider": "vieneu"`)
+	recorded = strings.ReplaceAll(recorded, `"model": "eleven_turbo_v2_5"`, `"model": "`+viModel+`"`)
+	writeFile(t, manifest, recorded)
+	return root
+}
+
+// English on a hosted provider and Vietnamese on a local one: each locale's
+// model is judged against the provider that voices it, not the project-wide one.
+func TestChecks_PerLocaleProviderIsJudgedAgainstItsOwnPolicy(t *testing.T) {
+	root := mixedProviderProject(t, "v3turbo")
+
+	if got := failingIDs(t, root, nil); len(got) != 0 {
+		t.Errorf("failing checks = %v, want none: v3turbo is cleared for vi on vieneu", got)
+	}
+}
+
+func TestChecks_PerLocaleProviderStillRefusesAnUnclearedModel(t *testing.T) {
+	root := mixedProviderProject(t, "v2")
+
+	got := failingIDs(t, root, nil)
+	for _, id := range []string{"CHK-04", "CHK-08"} {
+		if !slices.Contains(got, id) {
+			t.Errorf("failing checks = %v, want %s: v2 has not been cleared by ear for vi", got, id)
+		}
+	}
+}
+
+// `nv voiceover` voices each locale with that locale's provider: English goes
+// through the project-wide one and is written, Vietnamese reaches VieNeu and
+// stops there for want of an interpreter.
+func TestVoiceover_RoutesEachLocaleToItsOwnProvider(t *testing.T) {
+	t.Setenv("NV_VIENEU_PYTHON", "")
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "video.config.yaml"), strings.Replace(baseConfig,
+		"      voiceId: v-vi\n      model: eleven_turbo_v2_5",
+		"      provider: vieneu\n      voiceId: v-vi\n      model: v3turbo", 1))
+	writeFile(t, filepath.Join(root, "content", "en.yaml"), baseEnglish)
+	writeFile(t, filepath.Join(root, "content", "vi.yaml"), baseVietnamese)
+	for _, scene := range []string{"Title", "Iteration", "Credits"} {
+		writeFile(t, filepath.Join(root, "src", "scenes", scene+".tsx"), sceneSource)
+	}
+	p, err := project.Load(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = voiceover.Run(context.Background(), p, voiceover.Options{}, io.Discard)
+	if err == nil || !strings.Contains(err.Error(), "vi") || !strings.Contains(err.Error(), "NV_VIENEU_PYTHON") {
+		t.Fatalf("voiceover.Run() = %v, want the Vietnamese locale refused for lack of NV_VIENEU_PYTHON", err)
+	}
+	if !strings.Contains(read(t, filepath.Join(root, "public", "voiceover", "en", "manifest.json")), `"provider": "silence"`) {
+		t.Error("English was not voiced by the project-wide provider")
+	}
+}
+
 func TestSourceCheck_WallClock(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
