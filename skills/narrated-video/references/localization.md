@@ -191,7 +191,8 @@ paths, which are NFD by convention.
 3. **Voice** — add `tts.voices.<code>` with a `voiceId` and a `model` that is
    cleared for the language. `nv` refuses a denied *or unlisted* model; see
    `tts-providers.md`. Clearing a new model means listening to it with someone who
-   speaks the language.
+   speaks the language. A locale may use a different provider from the rest of the
+   project: set `provider` on that voice.
 
 4. **Content** — copy `content/en.yaml` to `content/<code>.yaml` and translate.
    Keep the structure identical, including **array lengths**: TypeScript makes a

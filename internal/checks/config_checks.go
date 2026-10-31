@@ -104,12 +104,6 @@ func noSecretLiterals(kit *Kit) Result {
 func ttsModelAllowed(kit *Kit) Result {
 	const id, title = "CHK-04", "every locale's TTS model is cleared for that language"
 
-	provider, err := tts.Get(kit.Config.TTS.Provider)
-	if err != nil {
-		return fail(id, title, "set tts.provider to a provider the tool ships — see references/tts-providers.md",
-			[]Finding{{Where: config.FileName + " tts.provider", Detail: err.Error()}})
-	}
-
 	var findings []Finding
 	for _, locale := range kit.Config.Locales.List {
 		voice, ok := kit.Config.TTS.Voices[locale.Code]
@@ -117,11 +111,27 @@ func ttsModelAllowed(kit *Kit) Result {
 			findings = append(findings, Finding{Where: locale.Code, Detail: "no voice configured"})
 			continue
 		}
+		// The model is judged against the provider that will speak this locale,
+		// which may be its own override rather than the project-wide one.
+		provider, err := tts.Get(kit.Config.ProviderFor(locale.Code))
+		if err != nil {
+			findings = append(findings, Finding{Where: providerKey(kit, locale.Code), Detail: err.Error()})
+			continue
+		}
 		if err := tts.CheckModel(provider, locale.Code, voice.Model); err != nil {
 			findings = append(findings, Finding{Where: locale.Code, Detail: err.Error()})
 		}
 	}
 	return fail(id, title, "pick a model cleared for the language, or clear this one by ear and record it in the provider's policy", sortedFindings(findings))
+}
+
+// providerKey names the config key a locale's provider was read from, so a
+// finding points at the line to edit.
+func providerKey(kit *Kit, locale string) string {
+	if kit.Config.TTS.Voices[locale].Provider != "" {
+		return config.FileName + " tts.voices." + locale + ".provider"
+	}
+	return config.FileName + " tts.provider"
 }
 
 // CHK-19. Some providers exist to make a project runnable without an API key,
@@ -159,13 +169,12 @@ func providerCommittable(kit *Kit) Result {
 func costCapDeclared(kit *Kit) Result {
 	const id, title = "CHK-20", "the declared spend ceiling covers the current script"
 
-	provider, err := tts.Get(kit.Config.TTS.Provider)
-	if err != nil {
-		return pass(id, title) // CHK-04 owns an unknown provider.
-	}
-
 	estimate := 0.0
 	for _, locale := range kit.Config.LocaleCodes() {
+		provider, err := tts.Get(kit.Config.ProviderFor(locale))
+		if err != nil {
+			continue // CHK-04 owns an unknown provider.
+		}
 		price := provider.PricePer1kChars(kit.Config.TTS.Voices[locale].Model)
 		for _, sceneID := range kit.NarratedScenes() {
 			line := kit.Content[locale].Narration[sceneID]

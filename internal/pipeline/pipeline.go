@@ -16,13 +16,13 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/cuongtranba/narrated-video/internal/checks"
 	"github.com/cuongtranba/narrated-video/internal/config"
 	"github.com/cuongtranba/narrated-video/internal/timing"
-	"github.com/cuongtranba/narrated-video/internal/tts"
 	"github.com/cuongtranba/narrated-video/internal/voiceover"
 )
 
@@ -338,13 +338,29 @@ func window(t config.TargetDuration) string {
 }
 
 func spend(kit *checks.Kit) Spend {
-	out := Spend{Provider: kit.Config.TTS.Provider, CapUSD: kit.Config.TTS.CostCapUSD}
-	provider, err := tts.Get(kit.Config.TTS.Provider)
+	out := Spend{Provider: providerSummary(kit.Config), CapUSD: kit.Config.TTS.CostCapUSD}
+	characters, estimate, err := voiceover.EstimateSpend(kit.Project, kit.Config.Locales.List)
 	if err != nil {
 		return out
 	}
-	out.Characters, out.EstimatedUSD = voiceover.EstimateSpend(kit.Project, provider, kit.Config.Locales.List)
+	out.Characters, out.EstimatedUSD = characters, estimate
 	return out
+}
+
+// providerSummary names every provider the project voices with, in locale
+// order and without repeats: "elevenlabs" for a one-provider project, as it
+// always was, "elevenlabs, vieneu" when a locale overrides it.
+func providerSummary(cfg *config.Config) string {
+	var ids []string
+	for _, locale := range cfg.LocaleCodes() {
+		if id := cfg.ProviderFor(locale); !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return cfg.TTS.Provider
+	}
+	return strings.Join(ids, ", ")
 }
 
 func Clock(seconds float64) string {

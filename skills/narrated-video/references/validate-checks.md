@@ -65,14 +65,15 @@ dozen shell commands, not through the config.
 
 ### CHK-04 — every locale's TTS model is cleared for that language
 
-Reads `tts.provider` and `tts.voices` and consults the provider's model policy.
+Reads `tts.provider` and `tts.voices` and consults the model policy of the provider
+that voices each locale: its own `tts.voices.<locale>.provider` when it sets one,
+otherwise `tts.provider`.
 
 Fails when a locale has no voice, when its model is **denied**, or when its model
 is merely **unlisted**. Unlisted fails too: a model never judged by ear for a
 language must not default into use just because the request would succeed.
 
 Remedy: `pick a model cleared for the language, or clear this one by ear and record it in the provider's policy`
-(unknown provider: `set tts.provider to a provider the tool ships — see references/tts-providers.md`)
 
 ## Audio
 
@@ -271,8 +272,8 @@ and breaks CHK-01.
 
 ### CHK-20 — the declared spend ceiling covers the current script
 
-Estimates the cost of synthesizing every locale at the configured models' rates
-and compares against `tts.costCapUsd`.
+Estimates the cost of synthesizing every locale at its provider's rate for the
+configured model, and compares against `tts.costCapUsd`.
 
 Remedy: `raise tts.costCapUsd, shorten the script, or synthesize one locale at a time`
 

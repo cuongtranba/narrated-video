@@ -148,7 +148,7 @@ cmd/nv/                     the CLI
 internal/config/            schema-validated config, single source of defaults
 internal/timing/            the derivation; tested against the reference cut's 16 numbers
 internal/gen/               the TypeScript codegen
-internal/tts/               provider interface + elevenlabs, silence, say
+internal/tts/               provider interface + elevenlabs, silence, say, vieneu
 internal/mp3/               MPEG frame-header duration measurement
 internal/fonts/             woff2/sfnt cmap reader, unicode-range parser, NFC
 internal/checks/            the 42 checks

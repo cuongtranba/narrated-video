@@ -469,12 +469,15 @@ return HTTP 200 with a plausible duration. Nothing but a native ear catches it, 
 models nobody has judged yet. Read `references/tts-providers.md` before picking a
 model for a new language.
 
-Three providers are registered. Default is `silence`: correctly-sized silent mp3s,
+Four providers are registered. Default is `silence`: correctly-sized silent mp3s,
 byte-identical on every machine, no account and no network. Everything except the
 voice works from a fresh clone, and the render wears an `UNVOICED` badge until real
 audio exists. `say` is macOS's built-in voice — a real read with no API key, useful
 for hearing pacing, but non-deterministic, so CHK-19 refuses to let it be
-committed. `elevenlabs` is the shippable one.
+committed. `elevenlabs` is the shippable one. `vieneu` is a free local Vietnamese
+voice (needs `NV_VIENEU_PYTHON`). A locale may name its own provider with
+`tts.voices.<locale>.provider`, so English can use `elevenlabs` while Vietnamese
+uses `vieneu`; `tts-providers.md` has the details.
 
 `nv voiceover <locale>` re-synthesizes just that language and leaves every other
 locale's measurements alone. `--force` waives only the pre-flight cost estimate
