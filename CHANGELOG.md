@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/cuongtranba/narrated-video/compare/v0.11.0...v0.12.0) (2026-10-31)
+
+
+### Features
+
+* **tts:** per-locale provider and a local VieNeu provider for Vietnamese ([#57](https://github.com/cuongtranba/narrated-video/issues/57)) ([345fa09](https://github.com/cuongtranba/narrated-video/commit/345fa09c0264c403d55228cb9ef427194592f8e6))
+
 ## [0.11.0](https://github.com/cuongtranba/narrated-video/compare/v0.10.0...v0.11.0) (2026-08-21)
 
 
