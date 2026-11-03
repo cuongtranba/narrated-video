@@ -1,5 +1,11 @@
 # narrated-video
 
+> **Moved.** As of 2026-11-03 `nv` and the Remotion kit live in the private
+> repository `cuongtranba/omninoise-ops` under `tools/narrated-video`
+> (source commit `3114b09`, 0.12.0, recorded in its `SOURCE.md`). Develop and
+> build them there with `tools/setup.sh`. This repository is frozen: no new
+> releases, and the `npx skills add` install below is no longer maintained.
+
 A skill that ships a prebuilt gate for narrated explainer videos.
 
 `nv` is a single static Go binary. It scaffolds a [Remotion](https://remotion.dev)
